@@ -1,6 +1,7 @@
 # Floppy disk image manipulation library
 (WIP)  
-This libray is intended to be used for manipulating the floppy disk images for emulators.
+This libray is intended to be used for manipulating the floppy disk images for emulators.  
+Initial target is to support D88/D77 floppy disk image format.  
 
 ### 'FD_IMAGE' and its derivative classes
 This class represents a floppy disk image file that may contain multiple floppy disk information.
