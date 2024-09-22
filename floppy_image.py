@@ -1,4 +1,3 @@
-import sys
 import os
 import struct
 import math
@@ -63,7 +62,7 @@ class FLOPPY_IMAGE_D88(FD_IMAGE):
         total_image_size = len(self.image_data)
         print(total_image_size)
         while image_pos < total_image_size:
-            d88header = struct.unpack_from('<17s9xbbI164I', self.image_data, 0)
+            d88header = struct.unpack_from('<17s9xBBI164I', self.image_data, 0)
             disk_name, write_protect, disk_type, disk_size = d88header[:4]
             track_table = d88header[4:]
             image_data = self.image_data[image_pos:image_pos+disk_size+1]
@@ -84,6 +83,7 @@ class FLOPPY_IMAGE_D88(FD_IMAGE):
 class FLOPPY_DISK_D88(FLOPPY_DISK):
     def __init__(self):
         super().__init__()
+        self.sect_per_track = 16
 
     def set_image_data(self, data, **kwargs):
         super().set_image_data(data, **kwargs)
@@ -112,7 +112,7 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
         curr_pos = 0
         sectors = []
         while curr_pos < len(track_data):
-            sect_header = struct.unpack_from('<bbbbHbbb5xH', track_data, curr_pos)
+            sect_header = struct.unpack_from('<BBBBHBBB5xH', track_data, curr_pos)
             C, H, R, N = sect_header[:4]
             num_sectors = sect_header[4]                # number of sectors in the track
             density = sect_header[5]                    # 0x00:double, 0x40:single
@@ -132,35 +132,50 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
             sectors.append(res)
         return sectors
 
-    def read_sector(self, track, sect_id = None, sect_idx = None, ignoreCH = True):
+    def read_sector(self, track, sect_id, ignoreCH = True):
         """
         Input parameters:
           track = Track number (0-163)
           sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.
-          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
           ignoreCH = Ignores C and H parameters and cares only R
         """
-        idx = -1
         if track < 0 or track >= len(self.tracks):
             raise ValueError
         track_data = self.tracks[track]
         num_sectors = track_data['sectors'][0]['num_sectors']       # number of sectors in the track
-        if sect_id is not None:
-            C, H, R = sect_id
-            for sect in track_data['sectors']:
-                match = False
-                if ignoreCH:
-                    if sect['R'] == R:
-                        match = True
-                else:
-                    if sect['C'] == C and sect['H'] == H and sect['R'] == R:
-                        match = True
-                if match:
-                    return sect
-        if sect_idx is not None:
-            if sect_idx < num_sectors:
-                sect = track_data['sectors'][sect_idx]
+        C, H, R = sect_id
+        for sect in track_data['sectors']:
+            match = False
+            if ignoreCH:
+                if sect['R'] == R:
+                    match = True
+            else:
+                if sect['C'] == C and sect['H'] == H and sect['R'] == R:
+                    match = True
+            if match:
                 return sect
+        return None
+
+    def read_sector_LBA(self, LBA):
+        track = LBA // self.sect_per_track
+        C = track // 2
+        H = track % 2
+        R = LBA % self.sect_per_track + 1
+        return self.read_sector(track, (C, H, R), True)
+
+    def read_sector_idx(self, track, sect_idx):
+        """
+        Input parameters:
+          track = Track number (0-163)
+          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
+        """
+        if track < 0 or track >= len(self.tracks):
+            raise ValueError
+        track_data = self.tracks[track]
+        num_sectors = track_data['sectors'][0]['num_sectors']       # number of sectors in the track
+        if sect_idx < num_sectors:
+            sect = track_data['sectors'][sect_idx]
+            return sect
         return None
 
     def write_sector(self, track, sect_id = None, sect_idx = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
