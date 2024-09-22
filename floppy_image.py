@@ -178,7 +178,7 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
             return sect
         return None
 
-    def write_sector(self, track, sect_id = None, sect_idx = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
+    def write_sector(self, track, sect_id = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
         """
         Input parameters:
           track = Track number (0-163)
@@ -188,7 +188,7 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
           create_new = Create a new sector when the specified sector does not exist
         """
         write_data = bytearray(write_data)
-        sect = self.read_sector(track, sect_id, sect_idx, ignoreCH)
+        sect = self.read_sector(track, sect_id, ignoreCH)
         data_size = int(math.pow(2, math.ceil(math.log(len(write_data))/math.log(2))))       # round up the data size to power of 2
         if data_size != len(write_data):
             print(f'WARNING: data size is rounded up to power of 2 ({len(write_data)} -> {data_size})')
@@ -201,12 +201,7 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
             sect['density'] = density
             #sect['num_sectors']        # no change
         elif create_new:
-            if sect_id is not None:
-                C, H, R = sect_id
-            else:
-                C = track // 2
-                H = track % 2
-                R = sect_idx + 1
+            C, H, R = sect_id
             N = int(math.log(len(write_data))/math.log(2))-7
             new_sector = {
                 'C': C,
@@ -226,4 +221,30 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
             for sect in self.tracks[track]['sectors']:
                 sect['num_sectors'] = num_sectors
 
+    def write_sector_LBA(self, LBA, write_data=None, density=0x00, data_mark=0x00, status=0x00, create_new=False):
+        track = LBA // self.sect_per_track
+        C = track // 2
+        H = track % 2
+        R = LBA % self.sect_per_track + 1
+        self.write_sector(track, (C, H, R), write_data, density, data_mark, status, True, create_new)
+
+    def write_sector_idx(self, track, sect_idx = None, write_data=None, density=0x00, data_mark=0x00, status=0x00):
+        """
+        Input parameters:
+          track = Track number (0-163)
+          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
+        """
+        write_data = bytearray(write_data)
+        sect = self.read_sector_idx(track, sect_idx)
+        data_size = int(math.pow(2, math.ceil(math.log(len(write_data))/math.log(2))))       # round up the data size to power of 2
+        if data_size != len(write_data):
+            print(f'WARNING: data size is rounded up to power of 2 ({len(write_data)} -> {data_size})')
+            write_data.extend(bytearray(data_size - len(write_data)))
+        if sect is not None:
+            sect['sect_data'] = write_data
+            sect['data_size'] = len(write_data)
+            sect['status'] = status
+            sect['data_mark'] = data_mark
+            sect['density'] = density
+            #sect['num_sectors']        # no change
 
