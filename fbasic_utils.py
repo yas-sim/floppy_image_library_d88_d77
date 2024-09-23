@@ -33,6 +33,7 @@ def decode_double(data:bytearray):
     return value
 
 
+
 class Decode_State:
     skip_link = 'Skipping link pointer',
     line_num = 'Line number on the top of the line',
@@ -42,13 +43,60 @@ class Decode_State:
     remark = 'Remark',
     literal = 'Leteral value'
 
-class Prev_Type:
+
+class Token_Type:
     keyword = 'keyword',
     literal = 'literal',
     new_line = 'new_line',
-    string = 'string',
+    string_literal = 'string',
     remark = 'remark',
-    line_number = 'line_number'
+    line_number = 'line_number',
+    EOL = 'end of line',
+    plain_chars = 'plain charactor',
+    others = 'others'
+
+
+class String_Buffer:
+    def __init__(self):
+        self.data = ''
+        self.deferred_string = ''
+        self.previous_type = Token_Type.others
+
+    def set_deferred_string(self, deferred_string):
+        self.deferred_string = deferred_string
+    
+    def clear_deferred_string(self):
+        self.deferred_string = ''
+    
+
+    def add_string(self, token_string, token_type:Token_Type):
+        token_string = asciij_string_to_utf8(token_string)
+        if token_string == ':':
+            if self.previous_type == Token_Type.line_number:       # Ignore ':' right after the line number
+                return
+            else:
+                self.deferred_string = ':'                        # Defer adding ':' until next keyword is determined, and it's not either one of "'" or "ELSE"
+                return
+        if token_string in [ '\'', 'REM', 'ELSE']:
+            self.deferred_string = ''
+
+        self.data += self.deferred_string
+        if token_type == Token_Type.keyword or token_type == Token_Type.plain_chars:
+            if self.previous_type == Token_Type.line_number:
+                self.data += ' '
+        self.data += token_string
+
+        self.deferred_string = ''
+        self.previous_type = token_type
+
+    def clear_buffer(self):
+        self.__init__()
+
+    def finalize(self):
+        self.data += self.deferred_string
+        self.deferred_string = ''
+        return self.data
+
 
 def F_BASIC_IR_decode(ir_data):
     ir_codes = list(ir_table.keys())
@@ -57,8 +105,7 @@ def F_BASIC_IR_decode(ir_data):
     ir_codes = list(ir_table_ff.keys())
     ir_min_ff = min(ir_codes)
     ir_max_ff = max(ir_codes)
-    prev_type = Prev_Type.new_line
-    res = ''
+    res = String_Buffer()
     # Link pointer (XX,XX), Line Number (XX, XX), IR/Literal, Line separator (0x00)
     # Line number: 0xfe 0xf2 0xXX 0xXX
     # Line separator: 0x00
@@ -68,7 +115,8 @@ def F_BASIC_IR_decode(ir_data):
     literal_type = 0
     literal_val = 0
     decode_buf = bytearray()
-    special_chars = ' =+-*/\^()%#$!&@,.\';:?<>"_'
+    #special_chars = ' =+-*/\^()%#$!&@,.\';:?<>"_'
+    special_chars = ' =+-*/\^()%#$!&@,.;:?<>"_'
     for ir in ir_data:
         match state:
             case Decode_State.skip_link:
@@ -85,12 +133,11 @@ def F_BASIC_IR_decode(ir_data):
                     continue
                 line_num = struct.unpack_from('>H', decode_buf, 0)[0]
                 count = 0
-                res += str(line_num)
-                prev_type = Prev_Type.line_number
+                res.add_string(str(line_num), Token_Type.line_number)
                 state = Decode_State.ir_dec
             case Decode_State.ir_dec:               # BASIC keyword
                 if ir == 0x00:                      # Line separator
-                    res += '\n'
+                    res.add_string('\n', Token_Type.EOL)
                     count = 0
                     state = Decode_State.skip_link
                     continue
@@ -104,29 +151,17 @@ def F_BASIC_IR_decode(ir_data):
                     continue
                 if ir >= ir_min and ir <= ir_max:
                     keyword = ir_table[ir]
-                    if prev_type != Prev_Type.keyword and prev_type != Prev_Type.string:
-                        if keyword not in special_chars:
-                            res += ' '
-                    res += keyword
-                    prev_type = Prev_Type.keyword
+                    res.add_string(keyword, Token_Type.keyword)
                     if keyword == '\'' or keyword == 'REM':
                         state = Decode_State.remark
                     continue
-                if prev_type != Prev_Type.keyword and prev_type != Prev_Type.string:
-                    if chr(ir) not in special_chars:
-                        res += ' '
-                res += chr(ir)
+                res.add_string(chr(ir), Token_Type.plain_chars)
                 if ir == ord('"'):
                     state = Decode_State.string
-                else:
-                    prev_type = Prev_Type.keyword
             case Decode_State.ir_dec_ff:                        # BASIC keyword with $FF prefix
                 if ir >= ir_min_ff and ir <= ir_max_ff:
                     keyword = ir_table_ff[ir]
-                    if prev_type != Prev_Type.keyword and prev_type != Prev_Type.string:
-                        res += ' '
-                    res += keyword
-                prev_type = Prev_Type.keyword
+                    res.add_string(keyword, Token_Type.keyword)
                 state = Decode_State.ir_dec
             case Decode_State.literal:
                 decode_buf.extend([ir])
@@ -164,25 +199,22 @@ def F_BASIC_IR_decode(ir_data):
                             continue
                         literal_val = struct.unpack_from('>H', decode_buf, 2)[0]
                         literal_str = str(literal_val)
-                res += literal_str
-                prev_type = Prev_Type.literal
+                res.add_string(literal_str, Token_Type.literal)
                 state = Decode_State.ir_dec
             case Decode_State.string:
-                res += ascii_table_half[ir]
-                prev_type = Prev_Type.string
+                res.add_string(chr(ir), Token_Type.string_literal)
                 if ir == ord('"'):
                     state = Decode_State.ir_dec
                 if ir == 0x00:
-                    res += '\n'
+                    res.add_string('\n', Token_Type.EOL)
                     count = 0
                     state = Decode_State.skip_link
                     continue
             case Decode_State.remark:
                 if ir == 0x00:                      # Line separator
-                    res += '\n'
+                    res.add_string('\n', Token_Type.EOL)
                     count = 0
                     state = Decode_State.skip_link
-                    prev_type = Prev_Type.remark
                     continue
-                res += ascii_table_half[ir]
-    return res
+                res.add_string(chr(ir), Token_Type.remark)
+    return res.finalize()
