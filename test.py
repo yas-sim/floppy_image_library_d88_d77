@@ -23,8 +23,16 @@ if True:
 #print(fs.read_FAT())
 #print(fs.image.read_sector(2, (1,0,4)))
 
+data = fs.read_file('EXMON')
 print()
-data = fs.read_file('EXMON.M')
-#print(data)
-data = fs.file_decode(data['data'], data['file_type'], data['ascii_flag'])
 print(data)
+
+data = fs.file_decode(data['data'], data['file_type'], data['ascii_flag'])
+print()
+print(data)
+
+from fbasic_utils import *
+
+basic_text = F_BASIC_IR_decode(data['data'])
+print()
+print(basic_text)

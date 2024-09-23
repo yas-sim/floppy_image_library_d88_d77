@@ -139,10 +139,12 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         res = { 'data':file_data, 'file_type':file_type, 'ascii_flag':ascii_flag, 'file_name':file_name, 'file_name_j':file_name_j, 'random_access_flag':random_access_flag, 'top_cluster':top_cluster, 'num_sectors':num_sectors }
         return res
 
-    def file_decode(self, file_data, file_type, ascii_flag):
+    def file_decode(self, file_data:bytearray, file_type:int, ascii_flag:int):
         """
-        file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code
-        ascii_flag: 0x00:Binary, 0xff:ASCII
+        Description: Decode file contents based on the file attributes.  
+        file_data: Data to decode  
+        file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code  
+        ascii_flag: 0x00:Binary, 0xff:ASCII  
         """
         data = bytearray()
         match ascii_flag:
@@ -197,4 +199,3 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         id_sect = image.read_sector(0, (0, 0, 3))
         if id_sect['sect_data'][0] != ord('S'):
             print('ERROR: Wrong disk ID. Not a F-BASIC disk.')
-

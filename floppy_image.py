@@ -109,6 +109,9 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
 
 
     def parse_sectors(self, track_data):
+        """
+        Parse given track image data and extracts sectors.
+        """
         curr_pos = 0
         sectors = []
         while curr_pos < len(track_data):
@@ -134,10 +137,11 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
 
     def read_sector(self, track, sect_id, ignoreCH = True):
         """
-        Input parameters:
-          track = Track number (0-163)
-          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.
-          ignoreCH = Ignores C and H parameters and cares only R
+        Read a sector. Use track number and sector ID (C, H, R) to specify the sector.  
+        Input parameters:  
+          track = Track number (0-163)  
+          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
+          ignoreCH = Ignores C and H parameters and cares only R  
         """
         if track < 0 or track >= len(self.tracks):
             raise ValueError
@@ -157,6 +161,9 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
         return None
 
     def read_sector_LBA(self, LBA):
+        """
+        Read a sector. Use LBA to specify the sector. LBA starts from 0 and LBA=0 represents the CHR=(0,0,1)
+        """
         track = LBA // self.sect_per_track
         C = track // 2
         H = track % 2
@@ -180,12 +187,13 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
 
     def write_sector(self, track, sect_id = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
         """
-        Input parameters:
-          track = Track number (0-163)
-          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.
-          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
-          ignoreCH = Ignores C and H parameters and cares only R
-          create_new = Create a new sector when the specified sector does not exist
+        Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.  
+        Input parameters:  
+          track = Track number (0-163)  
+          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
+          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.  
+          ignoreCH = Ignores C and H parameters and cares only R  
+          create_new = Create a new sector when the specified sector does not exist  
         """
         write_data = bytearray(write_data)
         sect = self.read_sector(track, sect_id, ignoreCH)
@@ -222,6 +230,9 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
                 sect['num_sectors'] = num_sectors
 
     def write_sector_LBA(self, LBA, write_data=None, density=0x00, data_mark=0x00, status=0x00, create_new=False):
+        """
+        Write data to a sector. Use LBA to specify the sector. LBA starts from 0 and LBA=0 represents the CHR=(0,0,1)
+        """
         track = LBA // self.sect_per_track
         C = track // 2
         H = track % 2
@@ -230,8 +241,8 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
 
     def write_sector_idx(self, track, sect_idx = None, write_data=None, density=0x00, data_mark=0x00, status=0x00):
         """
-        Input parameters:
-          track = Track number (0-163)
+        Input parameters:  
+          track = Track number (0-163)  
           sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
         """
         write_data = bytearray(write_data)
