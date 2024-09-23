@@ -64,16 +64,17 @@ class String_Buffer:
 
     def set_deferred_string(self, deferred_string):
         self.deferred_string = deferred_string
-    
+
     def clear_deferred_string(self):
         self.deferred_string = ''
     
-
     def add_string(self, token_string, token_type:Token_Type):
         token_string = asciij_string_to_utf8(token_string)
         if token_string == ':':
-            if self.previous_type == Token_Type.line_number:       # Ignore ':' right after the line number
+            if self.previous_type == Token_Type.line_number:      # Ignore ':' right after the line number
                 return
+            elif self.deferred_string == ':':
+                self.deferred_string = ''
             else:
                 self.deferred_string = ':'                        # Defer adding ':' until next keyword is determined, and it's not either one of "'" or "ELSE"
                 return
