@@ -136,7 +136,61 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         file_name, file_name_j, file_type, ascii_flag, random_access_flag, top_cluster, num_sectors = self.get_directory_entry(file_name)
         chain, last_secs = self.trace_FAT_chain(top_cluster)
         file_data = self.read_cluster_chain(chain, last_secs)
-        return file_data
+        res = { 'data':file_data, 'file_type':file_type, 'ascii_flag':ascii_flag, 'file_name':file_name, 'file_name_j':file_name_j, 'random_access_flag':random_access_flag, 'top_cluster':top_cluster, 'num_sectors':num_sectors }
+        return res
+
+    def file_decode(self, file_data, file_type, ascii_flag):
+        """
+        file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code
+        ascii_flag: 0x00:Binary, 0xff:ASCII
+        """
+        data = bytearray()
+        match ascii_flag:
+            case 0x00:              # Binary
+                match file_type:
+                    case 0x00:
+                        match file_data[0]:
+                            case 0xff:      # BASIC binary source (not protected)
+                                unlist = struct.unpack_from('<H', file_data, 1)     # UNLIST line number
+                                eof = bytearray([0x00, 0x00, 0x00, 0x1a])
+                                for pos in range(3, len(file_data)-4):              # 3:Skip ID and unlist line number on the top.
+                                    if file_data[pos:pos+4] == eof:
+                                        data = file_data[3:pos]
+                                        res = { 'file_type':0, 'data':data, 'unlist':unlist }
+                                        return res
+                            case 0xfe:      # BASIC binary source (protected)
+                                unlist = struct.unpack_from('>H', file_data, 1)[0]     # UNLIST line number
+                                eof = 0x1a
+                                for pos in range(3, len(file_data)):
+                                    if file_data[pos] == eof:
+                                        data = file_data[3:pos]
+                                        res = { 'file_type':1, 'data':data, 'unlist':unlist }
+                            case _:
+                                return { 'file_type':-1 }
+                    case 0x01:
+                        return { 'file_type':-1 }
+                    case 0x02:
+                        if file_data[0] == 0x00:
+                            mc_len, mc_load_addr = struct.unpack_from('>HH', file_data, 1)          # Machine code length, load address
+                            eof = bytearray([0xff, 0x00, 0x00])
+                            data = file_data[5:5+mc_len]
+                            if file_data[5+mc_len:5+mc_len+3] == eof:
+                                mc_entry_addr = struct.unpack_from('>H', file_data, 5+mc_len+3)[0]  # Entry address
+                                if file_data[5+mc_len+3+2] == 0x1a:
+                                    res = { 'file_type':2, 'data':data, 'length':mc_len, 'load_address':mc_load_addr, 'entry_address':mc_entry_addr}
+                                    return res
+                        return { 'file_type':-1 }
+                    case _:
+                        return { 'file_type':-1 }
+            case 0xff:          # ASCII
+                eof = 0x1a
+                for pos in range(len(file_data)):
+                    if file_data[pos] == eof:
+                        data = file_data[:pos]
+                        res = { 'file_type':3, 'data':data }
+                        return res
+            case _:
+                return { 'file_type':-1 }
 
     def set_image(self, image:FLOPPY_DISK_D88):
         self.image = image

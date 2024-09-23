@@ -37,6 +37,9 @@ ascii_table_z = \
 def asciij_to_utf8(asciij_str):
     res = ''
     for ch in asciij_str:
-        utf8 = ascii_table_h[ch]
+        if ch == ord('\r') or ch == ord('\n'):
+            utf8 = chr(ch)
+        else:
+            utf8 = ascii_table_h[ch]
         res += utf8
     return res

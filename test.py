@@ -3,7 +3,8 @@ from file_system import *
 
 image_file = FLOPPY_IMAGE_D88()
 #image.read_file('fb_toolbox.d77')
-image_file.read_file('Expert FM.D77')
+#image_file.read_file('Expert FM.D77')
+image_file.read_file('cdos7v2.d77')
 
 disk_image = image_file.images[0]
 
@@ -19,10 +20,11 @@ if True:
     files = fs.list_files()
     print(files)
 
-print(fs.read_FAT())
-print(fs.image.read_sector(2, (1,0,4)))
+#print(fs.read_FAT())
+#print(fs.image.read_sector(2, (1,0,4)))
 
 print()
-data = fs.read_file('pﾏｲｸﾉﾀﾋ゛')
-print(asciij_to_utf8(data))
-print(len(data))
+data = fs.read_file('EXMON.M')
+#print(data)
+data = fs.file_decode(data['data'], data['file_type'], data['ascii_flag'])
+print(data)
