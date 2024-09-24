@@ -47,3 +47,11 @@ fs.dump_FAT()
 fs.delete_file('XFER')
 fs.dump_valid_directory()
 fs.dump_FAT()
+
+#fs.create_directory_entry(fs.normalize_file_name('SHIMURA'), 0, 0, 0)
+#fs.dump_valid_directory()
+
+dummy = bytearray([0x02 for _ in range(19700)])
+fs.write_file('SHIMURA', dummy, 0, 0, 0)
+fs.dump_valid_directory()
+fs.dump_FAT()

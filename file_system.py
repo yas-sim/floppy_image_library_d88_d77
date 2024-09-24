@@ -150,27 +150,24 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         return {'file_name':'', 'file_name_j':'', 'file_type':-1, 'ascii_flag':-1, 'random_access_flag':-1, 'top_cluster':-1, 'num_sectors=':-1, 'dir_idx':-1}
 
 
-    def normalize_file_name(self, file_name:bytearray):
+    def normalize_file_name(self, file_name:any):
+        """
+        Return:
+        """
         if type(file_name) is bytes:
             file_name = bytearray(file_name)
         elif type(file_name) is str:
             file_name = bytearray(file_name.encode())
-        while True:
-            if file_name[-1] == ord(' '):
-                file_name.pop()
-            else:
-                return file_name
-            if len(file_name) == 0:
-                return file_name
+        if type(file_name) != bytearray:
+            raise TypeError
+        if len(file_name) < 8:
+            file_name.extend([ord(' ') for _ in range(8-len(file_name))])
+        return file_name
 
 
-    def check_file_name_match(self, file_name1:str, file_name2:str):
-        if type(file_name1) is str and type(file_name2) is str: 
-            file_name1 = file_name1.rstrip(' ')
-            file_name2 = file_name2.rstrip(' ')
-        else:
-            file_name1 = self.normalize_file_name(file_name1)
-            file_name2 = self.normalize_file_name(file_name2)
+    def check_file_name_match(self, file_name1:str | bytearray, file_name2:str | bytearray):
+        file_name1 = self.normalize_file_name(file_name1)
+        file_name2 = self.normalize_file_name(file_name2)
         if file_name1 == file_name2:
             return True
         return False
@@ -197,6 +194,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         Return:
           Dict { 'data', 'file_type', 'ascii_flag', 'file_name', 'file_name_j', 'random_access_flag, 'top_cluster', 'num_sectors', 'dir_idx' }
         """
+        file_name = self.normalize_file_name(file_name)
         dir_entry = self.get_directory_entry(file_name)
         chain, last_secs = self.trace_FAT_chain(dir_entry['top_cluster'])
         file_data = self.read_cluster_chain(chain, last_secs)
@@ -322,15 +320,33 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
                 FAT[ch + 5] = 0xff
         self.write_FAT(FAT)
 
-    def delete_directory_entry(self, dir_idx:int):
+    def read_directry_by_dir_idx(self, dir_idx):
         sect = dir_idx // (256//32)     # 8 directory entries per sector
+        idx = dir_idx % (256//32)       # directory entry index in the sector        
+        data = self.image.read_sector_LBA(self.sect_per_track * 2 + 3 + sect)
+        return data
+
+    def write_directry_by_dir_idx(self, dir_idx, data):
+        sect = dir_idx // (256//32)     # 8 directory entries per sector
+        data = self.image.write_sector_LBA(self.sect_per_track * 2 + 3 + sect, data)
+
+    def create_directory_entry(self, file_name:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, top_cluster:int):
+        dir_idx = self.find_empty_directory_slot()
+        idx = dir_idx % (256//32)       # directory entry index in the sector        
+        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
+        data = bytearray(data)
+        struct.pack_into('<8s3xBBBB', data, idx * 32, file_name, file_type, ascii_flag, random_access_flag, top_cluster)
+        self.write_directry_by_dir_idx(dir_idx, data)
+
+    def delete_directory_entry(self, dir_idx:int):
         idx = dir_idx % (256//32)       # directory entry index in the sector
-        data = self.image.read_sector_LBA(self.sect_per_track * 2 + 3 + sect)['sect_data']
+        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
         data = bytearray(data)
         data[idx * 32] = 0x00
-        self.image.write_sector_LBA(self.sect_per_track * 2 + 3 + sect, data)
+        self.write_directry_by_dir_idx(dir_idx, data)
 
     def delete_file(self, file_name:str):
+        file_name = self.normalize_file_name(file_name)
         if self.is_exist(file_name) == False:
             raise FileNotFoundError
         dir_entry = self.get_directory_entry(file_name)
@@ -338,9 +354,42 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         self.delete_FAT_chain(fat_chain)
         self.delete_directory_entry(dir_entry['dir_idx'])
 
-    def write_file(self, data:bytearray, file_name:str, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
-        existence = self.is_exist(file_name)
+    def pad_data_to_fit_sector(self, data:bytearray):
+        num_pad = 256 - len(data) % 256
+        data.extend([0xff for _ in range(num_pad)])
+        return data
 
+    def write_file(self, file_name:str, write_data:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
+        file_name = self.normalize_file_name(file_name)
+        if self.is_exist(file_name):
+            if overwrite:
+                self.delete_file(file_name)
+            else:
+                raise FileExistsError
+        write_data = self.pad_data_to_fit_sector(write_data)
+        FAT = self.read_FAT()
+        top_cluster = -1
+        prev_cluster = -1
+        while True:
+            current_cluster = self.find_empty_cluster()
+            if top_cluster == -1:
+                top_cluster = current_cluster                   # Memorize the top cluster nunber
+            if prev_cluster != -1:
+                FAT[prev_cluster + 5] = current_cluster
+            LBA = self.cluster_to_LBA(current_cluster)
+            for sect_count in range(self.sect_per_cluster):
+                self.image.write_sector_LBA(LBA, write_data[:256])
+                write_data = write_data[256:]
+                FAT[current_cluster + 5] = 0xc0 + sect_count
+                if len(write_data) == 0:
+                    break
+            if sect_count < self.sect_per_cluster - 1:
+                break
+            prev_cluster = current_cluster
+            if len(write_data) == 0:
+                return
+        self.write_FAT(FAT)
+        self.create_directory_entry(file_name, file_type, ascii_flag, random_access_flag, top_cluster)
 
     def dump_directory(self):
         dir_entries = self.get_all_directory_entries()
