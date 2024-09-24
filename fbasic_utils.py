@@ -1,5 +1,6 @@
 import math
 import struct
+from enum import Enum
 
 from fbasic_ir_table import ir_table, ir_table_ff
 from ascii_j import *
@@ -33,27 +34,26 @@ def decode_double(data:bytearray):
     return value
 
 
+class Decode_State(Enum):
+    skip_link = 0
+    line_num = 1
+    ir_dec = 2
+    ir_dec_ff = 3
+    string = 4
+    remark = 5
+    literal = 6
 
-class Decode_State:
-    skip_link = 'Skipping link pointer',
-    line_num = 'Line number on the top of the line',
-    ir_dec = 'IR decoding',
-    ir_dec_ff = 'Extended IR decoding (with prefix $ff)',
-    string = 'String decoding',
-    remark = 'Remark',
-    literal = 'Leteral value'
 
-
-class Token_Type:
-    keyword = 'keyword',
-    literal = 'literal',
-    new_line = 'new_line',
-    string_literal = 'string',
-    remark = 'remark',
-    line_number = 'line_number',
-    EOL = 'end of line',
-    plain_chars = 'plain charactor',
-    others = 'others'
+class Token_Type(Enum):
+    keyword = 0
+    literal = 1
+    new_line = 2
+    string_literal = 3
+    remark = 4
+    line_number = 5
+    EOL = 6
+    plain_chars = 7
+    others = 8
 
 
 class String_Buffer:
