@@ -121,4 +121,16 @@ When a file is deleted, the top of the file name is set to 0x00, and the used cl
 |0x0e|0x01|The first cluster number||
 |0x0f|0x11|reserved|
 
+-----------------------------
+## Bin list
+- Image write back
+- New image creation
+- Disk full detection on wite_file
+- Sector read error handling
+- File access by dir_idx
+- File access CLI commands
+- Motorola-S decoding encoding
+- Image sserialization
+- GUI ?
+
 

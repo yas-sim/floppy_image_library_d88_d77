@@ -1,5 +1,6 @@
 from floppy_image import *
 from ascii_j import *
+from misc import *
 
 class FILE_SYSTEM:
     def __init__(self):
@@ -11,6 +12,14 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         self.sect_per_cluster = 8
         self.sect_per_track = 16
         super().__init__()
+
+    def set_image(self, image:FLOPPY_DISK_D88):
+        self.image = image
+        id_sect = image.read_sector(0, (0, 0, 3))
+        if id_sect['sect_data'][0] != ord('S'):
+            print('ERROR: Wrong disk ID. Not a F-BASIC disk.')
+
+
 
     def CHR_to_LBA(self, C, H, R):
         LBA = (C * 2 + H) * self.sect_per_track + R - 1
@@ -47,6 +56,8 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         C, H, R = self.LBA_to_CHR(sect_idx)
         return (C, H, R)
 
+
+
     def read_FAT(self):
         FAT = self.image.read_sector(2, (1, 0, 1))['sect_data']
         return FAT
@@ -78,13 +89,18 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             elif next_cluster == 0xff:
                 return ([], -1)                                 # This cluster is free (not used)
 
-    def search_vacant_cluster(self):
+    def find_empty_cluster(self):
+        """
+        Return:
+          An empty cluster number. -1 when no empty cluster is found.
+        """
         FAT = self.read_FAT()
         for cluster in range(152):
-            val = FAT[5 + cluster - 1]
-            if val == 0xff:
+            if FAT[cluster + 5] == 0xff:
                 return cluster
         return -1
+
+
 
     def get_all_directory_entries(self):
         """
@@ -144,7 +160,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         """
         dir_entries = self.get_valid_directory_entries()
         for dir_entry in dir_entries:
-            match = self.check_file_name_match(dir_entry['file_name'], file_name)
+            match = self.compare_file_names(dir_entry['file_name'], file_name)
             if match:
                 return dir_entry
         return {'file_name':'', 'file_name_j':'', 'file_type':-1, 'ascii_flag':-1, 'random_access_flag':-1, 'top_cluster':-1, 'num_sectors=':-1, 'dir_idx':-1}
@@ -165,13 +181,87 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         return file_name
 
 
-    def check_file_name_match(self, file_name1:str | bytearray, file_name2:str | bytearray):
+    def compare_file_names(self, file_name1:str | bytearray, file_name2:str | bytearray):
         file_name1 = self.normalize_file_name(file_name1)
         file_name2 = self.normalize_file_name(file_name2)
         if file_name1 == file_name2:
             return True
         return False
 
+
+
+    def get_directory_entry_idx(self, file_name:str):
+        """
+        Return:
+          The index of directory entry (starts with 0). -1 when there was no empty directory entry.
+        """
+        dir_entries = self.get_valid_directory_entries()
+        #file_name_j = bytearray(asciij_string_to_utf8(file_name).encode())
+        for dir_entry in dir_entries:
+            for ofst in range(0, 256, 32):
+                match = self.compare_file_names(dir_entry['file_name'], file_name)
+                if match:
+                    return dir_entry['dir_idx']
+        return -1
+
+    def find_empty_directory_slot(self):
+        """
+        Return:
+          The index of empty directory entry (starts with 0). -1 when there was no empty directory entry.
+        """
+        dir_top_LBA = 2 * self.sect_per_track + 3
+        dir_end_LBA = 3 * self.sect_per_track + self.sect_per_track -1
+        dir_entry_idx = 0
+        for sect_LBA in range(dir_top_LBA, dir_end_LBA+1):
+            sect = self.image.read_sector_LBA(sect_LBA)
+            sect_data = sect['sect_data']
+            for ofst in range(0, 256, 32):
+                if sect_data[ofst] == 0x00 or sect_data[ofst] == 0xff:
+                    return dir_entry_idx
+                dir_entry_idx += 1
+        return -1
+
+    def is_exist(self, file_name:str):
+        dir_entry = self.get_directory_entry(file_name)
+        existence = False if dir_entry['file_name'] == '' else True
+        return existence
+
+    def delete_FAT_chain(self, chain:list[int]):
+        FAT = bytearray(self.read_FAT())
+        for ch in chain[0]:
+            if ch <= 151:
+                FAT[ch + 5] = 0xff
+        self.write_FAT(FAT)
+
+    def read_directry_by_dir_idx(self, dir_idx):
+        sect = dir_idx // (256//32)     # 8 directory entries per sector
+        idx = dir_idx % (256//32)       # directory entry index in the sector        
+        data = self.image.read_sector_LBA(self.sect_per_track * 2 + 3 + sect)
+        return data
+
+    def write_directry_by_dir_idx(self, dir_idx, data):
+        sect = dir_idx // (256//32)     # 8 directory entries per sector
+        data = self.image.write_sector_LBA(self.sect_per_track * 2 + 3 + sect, data)
+
+    def create_directory_entry(self, file_name:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, top_cluster:int):
+        dir_idx = self.find_empty_directory_slot()
+        idx = dir_idx % (256//32)       # directory entry index in the sector        
+        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
+        data = bytearray(data)
+        struct.pack_into('<8s3xBBBB', data, idx * 32, file_name, file_type, ascii_flag, random_access_flag, top_cluster)
+        self.write_directry_by_dir_idx(dir_idx, data)
+
+    def delete_directory_entry(self, dir_idx:int):
+        idx = dir_idx % (256//32)       # directory entry index in the sector
+        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
+        data = bytearray(data)
+        data[idx * 32] = 0x00
+        self.write_directry_by_dir_idx(dir_idx, data)
+
+    def pad_data_to_fit_sector(self, data:bytearray):
+        num_pad = 256 - len(data) % 256
+        data.extend([0xff for _ in range(num_pad)])
+        return data
 
     def read_cluster_chain(self, chain, last_secs):
         """
@@ -189,6 +279,16 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
                 res.extend(sect_data)
         return res
 
+
+    def delete_file(self, file_name:str):
+        file_name = self.normalize_file_name(file_name)
+        if self.is_exist(file_name) == False:
+            raise FileNotFoundError
+        dir_entry = self.get_directory_entry(file_name)
+        fat_chain = self.trace_FAT_chain(dir_entry['top_cluster'])
+        self.delete_FAT_chain(fat_chain)
+        self.delete_directory_entry(dir_entry['dir_idx'])
+
     def read_file(self, file_name:str):
         """
         Return:
@@ -196,11 +296,47 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         """
         file_name = self.normalize_file_name(file_name)
         dir_entry = self.get_directory_entry(file_name)
+        assert dir_entry['file_name'] != ''                     # File not found
         chain, last_secs = self.trace_FAT_chain(dir_entry['top_cluster'])
         file_data = self.read_cluster_chain(chain, last_secs)
-        #res = { 'data':file_data, 'file_type':dir_entry['file_type'], 'ascii_flag':dir_entry['ascii_flag'], 'file_name':dir_entry['file_name'], 'file_name_j':dir_entry['file_name_j'], 'random_access_flag':dir_entry['random_access_flag'], 'top_cluster':dir_entry['top_cluster'], 'num_sectors':dir_entry['num_sectors'], 'dir_idx':dir_entry['dir_idx'] }
         res = { 'data':file_data, **dir_entry }
         return res
+
+    def write_file(self, file_name:str, write_data:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
+        file_name = self.normalize_file_name(file_name)
+        if self.is_exist(file_name):
+            if overwrite:
+                self.delete_file(file_name)
+            else:
+                raise FileExistsError
+        write_data = self.pad_data_to_fit_sector(write_data)
+        FAT = self.read_FAT()
+        top_cluster = -1
+        prev_cluster = -1
+        while True:
+            assert len(write_data) % 256 == 0
+            current_cluster = self.find_empty_cluster()
+            assert current_cluster != -1                        # Disk full
+            if top_cluster == -1:
+                top_cluster = current_cluster                   # Memorize the top cluster nunber
+            if prev_cluster != -1:
+                FAT[prev_cluster + 5] = current_cluster
+            LBA = self.cluster_to_LBA(current_cluster)
+            for sect_count in range(self.sect_per_cluster):
+                self.image.write_sector_LBA(LBA, write_data[:256])
+                write_data = write_data[256:]
+                FAT[current_cluster + 5] = 0xc0 + sect_count
+                if len(write_data) == 0:
+                    break
+            if sect_count < self.sect_per_cluster - 1:
+                break
+            prev_cluster = current_cluster
+            if len(write_data) == 0:
+                return
+        self.write_FAT(FAT)
+        self.create_directory_entry(file_name, file_type, ascii_flag, random_access_flag, top_cluster)
+
+
 
     def extract_file_contents(self, file_data:bytearray, file_type:int, ascii_flag:int):
         """
@@ -257,139 +393,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             case _:
                 return { 'file_type':-1 }
 
-    def set_image(self, image:FLOPPY_DISK_D88):
-        self.image = image
-        id_sect = image.read_sector(0, (0, 0, 3))
-        if id_sect['sect_data'][0] != ord('S'):
-            print('ERROR: Wrong disk ID. Not a F-BASIC disk.')
 
-
-    def get_directory_entry_idx(self, file_name:str):
-        """
-        Return:
-          The index of directory entry (starts with 0). -1 when there was no empty directory entry.
-        """
-        dir_entries = self.get_valid_directory_entries()
-        #file_name_j = bytearray(asciij_string_to_utf8(file_name).encode())
-        for dir_entry in dir_entries:
-            for ofst in range(0, 256, 32):
-                match = self.check_file_name_match(dir_entry['file_name'], file_name)
-                if match:
-                    return dir_entry['dir_idx']
-        return -1
-
-    def find_empty_directory_slot(self):
-        """
-        Return:
-          The index of empty directory entry (starts with 0). -1 when there was no empty directory entry.
-        """
-        dir_top_LBA = 2 * self.sect_per_track + 3
-        dir_end_LBA = 3 * self.sect_per_track + self.sect_per_track -1
-        dir_entry_idx = 0
-        for sect_LBA in range(dir_top_LBA, dir_end_LBA+1):
-            sect = self.image.read_sector_LBA(sect_LBA)
-            sect_data = sect['sect_data']
-            for ofst in range(0, 256, 32):
-                if sect_data[ofst] == 0x00 or sect_data[ofst] == 0xff:
-                    return dir_entry_idx
-                dir_entry_idx += 1
-        return -1
-
-    def find_empty_cluster(self):
-        """
-        Return:
-          An empty cluster number. -1 when no empty cluster is found.
-        """
-        FAT = self.image.read_sector(2, (1,0,1))   # FAT == C=1, H=0, R=1
-        FAT_data = FAT['sect_data']
-        ofst = 5
-        for cluster in range(152):
-            if FAT_data[cluster+ofst] == 0xff:
-                return cluster
-        return -1
-
-    def is_exist(self, file_name:str):
-        dir_entry = self.get_directory_entry(file_name)
-        existence = False if dir_entry['file_name'] == '' else True
-        return existence
-
-    def delete_FAT_chain(self, chain:list[int]):
-        FAT = bytearray(self.read_FAT())
-        for ch in chain[0]:
-            if ch <= 151:
-                FAT[ch + 5] = 0xff
-        self.write_FAT(FAT)
-
-    def read_directry_by_dir_idx(self, dir_idx):
-        sect = dir_idx // (256//32)     # 8 directory entries per sector
-        idx = dir_idx % (256//32)       # directory entry index in the sector        
-        data = self.image.read_sector_LBA(self.sect_per_track * 2 + 3 + sect)
-        return data
-
-    def write_directry_by_dir_idx(self, dir_idx, data):
-        sect = dir_idx // (256//32)     # 8 directory entries per sector
-        data = self.image.write_sector_LBA(self.sect_per_track * 2 + 3 + sect, data)
-
-    def create_directory_entry(self, file_name:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, top_cluster:int):
-        dir_idx = self.find_empty_directory_slot()
-        idx = dir_idx % (256//32)       # directory entry index in the sector        
-        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
-        data = bytearray(data)
-        struct.pack_into('<8s3xBBBB', data, idx * 32, file_name, file_type, ascii_flag, random_access_flag, top_cluster)
-        self.write_directry_by_dir_idx(dir_idx, data)
-
-    def delete_directory_entry(self, dir_idx:int):
-        idx = dir_idx % (256//32)       # directory entry index in the sector
-        data = self.read_directry_by_dir_idx(dir_idx)['sect_data']
-        data = bytearray(data)
-        data[idx * 32] = 0x00
-        self.write_directry_by_dir_idx(dir_idx, data)
-
-    def delete_file(self, file_name:str):
-        file_name = self.normalize_file_name(file_name)
-        if self.is_exist(file_name) == False:
-            raise FileNotFoundError
-        dir_entry = self.get_directory_entry(file_name)
-        fat_chain = self.trace_FAT_chain(dir_entry['top_cluster'])
-        self.delete_FAT_chain(fat_chain)
-        self.delete_directory_entry(dir_entry['dir_idx'])
-
-    def pad_data_to_fit_sector(self, data:bytearray):
-        num_pad = 256 - len(data) % 256
-        data.extend([0xff for _ in range(num_pad)])
-        return data
-
-    def write_file(self, file_name:str, write_data:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
-        file_name = self.normalize_file_name(file_name)
-        if self.is_exist(file_name):
-            if overwrite:
-                self.delete_file(file_name)
-            else:
-                raise FileExistsError
-        write_data = self.pad_data_to_fit_sector(write_data)
-        FAT = self.read_FAT()
-        top_cluster = -1
-        prev_cluster = -1
-        while True:
-            current_cluster = self.find_empty_cluster()
-            if top_cluster == -1:
-                top_cluster = current_cluster                   # Memorize the top cluster nunber
-            if prev_cluster != -1:
-                FAT[prev_cluster + 5] = current_cluster
-            LBA = self.cluster_to_LBA(current_cluster)
-            for sect_count in range(self.sect_per_cluster):
-                self.image.write_sector_LBA(LBA, write_data[:256])
-                write_data = write_data[256:]
-                FAT[current_cluster + 5] = 0xc0 + sect_count
-                if len(write_data) == 0:
-                    break
-            if sect_count < self.sect_per_cluster - 1:
-                break
-            prev_cluster = current_cluster
-            if len(write_data) == 0:
-                return
-        self.write_FAT(FAT)
-        self.create_directory_entry(file_name, file_type, ascii_flag, random_access_flag, top_cluster)
 
     def dump_directory(self):
         dir_entries = self.get_all_directory_entries()
@@ -406,19 +410,3 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
     def dump_FAT(self, ofst=5):
         FAT_data = self.read_FAT()
         dump_data(FAT_data[ofst:ofst+152])
-
-
-def dump_data(data:bytearray):
-    ascii_buf = ''
-    for count, dt in enumerate(data):
-        if count % 16 == 0:
-            ascii_buf = ''
-            print(f'{count:04x}', end='')
-        print(f' {dt:02x}', end='')
-        ascii_buf += ascii_table_half[dt]
-        if count % 16 == 15:
-            print(f'  {ascii_buf}')
-            ascii_buf = ''
-    if ascii_buf != '':
-        print('   ' * (16-(count % 16)))
-        print(f'  {ascii_buf}')
