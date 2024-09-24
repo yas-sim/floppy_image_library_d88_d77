@@ -39,8 +39,11 @@ print()
 print(basic_text)
 
 fs.dump_valid_directory()
-print(fs.find_empty_directory_slot())
-
 fs.dump_FAT()
 
-print(fs.get_directory_entry_idx('XFER'))
+#print(fs.find_empty_directory_slot())
+#print(fs.get_directory_entry_idx('XFER'))
+
+fs.delete_file('XFER')
+fs.dump_valid_directory()
+fs.dump_FAT()

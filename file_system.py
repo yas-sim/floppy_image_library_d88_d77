@@ -51,7 +51,14 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         FAT = self.image.read_sector(2, (1, 0, 1))['sect_data']
         return FAT
 
+    def write_FAT(self, FAT_data):
+        self.image.write_sector(2, (1, 0, 1), FAT_data)
+
     def trace_FAT_chain(self, start_cluster):
+        """
+        Input parameters:
+          start_cluster
+        """
         chain = []
         FAT = self.read_FAT()
         curr_cluster = start_cluster
@@ -141,6 +148,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             if match:
                 return dir_entry
         return {'file_name':'', 'file_name_j':'', 'file_type':-1, 'ascii_flag':-1, 'random_access_flag':-1, 'top_cluster':-1, 'num_sectors=':-1, 'dir_idx':-1}
+
 
     def normalize_file_name(self, file_name:bytearray):
         if type(file_name) is bytes:
@@ -307,12 +315,28 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         existence = False if dir_entry['file_name'] == '' else True
         return existence
 
+    def delete_FAT_chain(self, chain:list[int]):
+        FAT = bytearray(self.read_FAT())
+        for ch in chain[0]:
+            if ch <= 151:
+                FAT[ch + 5] = 0xff
+        self.write_FAT(FAT)
+
+    def delete_directory_entry(self, dir_idx:int):
+        sect = dir_idx // (256//32)     # 8 directory entries per sector
+        idx = dir_idx % (256//32)       # directory entry index in the sector
+        data = self.image.read_sector_LBA(self.sect_per_track * 2 + 3 + sect)['sect_data']
+        data = bytearray(data)
+        data[idx * 32] = 0x00
+        self.image.write_sector_LBA(self.sect_per_track * 2 + 3 + sect, data)
+
     def delete_file(self, file_name:str):
-        existence = self.is_exist(file_name)
-        if existence == False:
+        if self.is_exist(file_name) == False:
             raise FileNotFoundError
         dir_entry = self.get_directory_entry(file_name)
-
+        fat_chain = self.trace_FAT_chain(dir_entry['top_cluster'])
+        self.delete_FAT_chain(fat_chain)
+        self.delete_directory_entry(dir_entry['dir_idx'])
 
     def write_file(self, data:bytearray, file_name:str, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
         existence = self.is_exist(file_name)
