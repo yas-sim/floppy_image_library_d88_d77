@@ -17,8 +17,9 @@ if False:
 fs = FM_FILE_SYSTEM()
 fs.set_image(disk_image)
 if True:
-    files = fs.list_files()
-    print(files)
+   #fs.dump_directory()
+   fs.dump_valid_directory()
+   fs.dump_FAT()
 
 #print(fs.read_FAT())
 #print(fs.image.read_sector(2, (1,0,4)))
@@ -27,8 +28,8 @@ data = fs.read_file('EXMON')
 print()
 print(data)
 
-data = fs.file_decode(data['data'], data['file_type'], data['ascii_flag'])
-print()
+data = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
+print('\ncontents')
 print(data)
 
 from fbasic_utils import *
@@ -36,3 +37,10 @@ from fbasic_utils import *
 basic_text = F_BASIC_IR_decode(data['data'])
 print()
 print(basic_text)
+
+fs.dump_valid_directory()
+print(fs.find_empty_directory_slot())
+
+fs.dump_FAT()
+
+print(fs.get_directory_entry_idx('XFER'))

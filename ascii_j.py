@@ -34,7 +34,7 @@ ascii_table_full = \
     '■■■■■■■■♠♡♦♧●〇／＼' +\
     '×円年月日時分秒〒市区町村人🏁 '
 
-def asciij_to_utf8(asciij_str:bytearray):
+def asciij_to_utf8(asciij_str:bytearray) -> str:
     res = ''
     for ch in asciij_str:
         if ch == ord('\r') or ch == ord('\n'):
@@ -44,7 +44,7 @@ def asciij_to_utf8(asciij_str:bytearray):
         res += utf8
     return res
 
-def asciij_string_to_utf8(asciij_str:str):
+def asciij_string_to_utf8(asciij_str:str) -> str:
     res = ''
     for ch in asciij_str:
         ch = ord(ch)
