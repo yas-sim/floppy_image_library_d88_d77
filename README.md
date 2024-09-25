@@ -22,6 +22,12 @@ This class represents the data of a single floppy disk.
 
 
 ### Track data
+
+|Name|Description|Note|
+|---|---|---|
+|`tracks[]`|Track data|List of 'Sector data'||
+
+**Obsoleted**
 |Name|Description|Note|
 |---|---|---|
 |`track_size`|Track size|Size of the track_data|

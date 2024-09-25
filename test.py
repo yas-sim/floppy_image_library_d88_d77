@@ -56,3 +56,6 @@ dummy = bytearray([0x02 for _ in range(19700)])
 fs.write_file('SHIMURA', dummy, 0, 0, 0)
 fs.dump_valid_directory()
 fs.dump_FAT()
+
+serialized_data = disk_image.serialize('json')
+print(serialized_data)

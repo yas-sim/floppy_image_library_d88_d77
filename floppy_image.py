@@ -2,7 +2,9 @@ import os
 import struct
 import math
 
+import base64
 import yaml
+import json
 
 class FLOPPY_IMAGE_D88:
     def __init__(self):
@@ -18,66 +20,18 @@ class FLOPPY_IMAGE_D88:
     def write_file(self, file_name):
         if self.image_data == None:
             return
+        self.prepare_image_data()
         open(file_name, 'wb').write(self.image_data)
 
-    def parse_image(self):
-        image_pos = 0
-        total_image_size = len(self.image_data)
-        print(total_image_size)
-        while image_pos < total_image_size:
-            d88header = struct.unpack_from('<17s9xBBI164I', self.image_data, 0)
-            disk_name, write_protect, disk_type, disk_size = d88header[:4]
-            track_table = d88header[4:]
-            image_data = self.image_data[image_pos:image_pos+disk_size+1]
-            disk_image = FLOPPY_DISK_D88()
-            disk_image.set_image_data(image_data,
-                                      disk_name = disk_name,
-                                      write_protect = write_protect,
-                                      disk_type = disk_type,
-                                      disk_size = disk_size,
-                                      track_table = track_table)
-            self.images.append(disk_image)
-            image_pos += disk_size 
- 
-
-
-
-
-class FLOPPY_DISK_D88:
-    def __init__(self):
-        self.image_data = None
-        self.optional_args = {}
-        self.sect_per_track = 16
-
-    def set_image_data(self, data, **kwargs):
-        self.data = data
-        self.optional_args = kwargs
-        self.parse()
-
-    def parse(self):
-        self.tracks = []
-        for track in range(164):        # D88 image max track num == 163
-            track_ofst = self.optional_args['track_table'][track]
-            if track_ofst != 0:
-                if track < 163:
-                    track_end = self.optional_args['track_table'][track+1]
-                else:
-                    track_end = self.optional_args['disk_size']
-                track_size = track_end - track_ofst
-                track_data = self.data[track_ofst:track_end]
-            else:
-                track_size = 0
-                track_data = []
-            self.tracks.append({'track_size':track_size, 'track_data':track_data})
-            sectors = self.parse_sectors(track_data)
-            self.tracks[-1].update({'sectors':sectors})
-
+    def prepare_image_data(self):
+        raise NotImplementedError
 
     def parse_sectors(self, track_data):
         """
         Parse given track image data and extracts sectors.
         """
         curr_pos = 0
+        sect_idx = 0
         sectors = []
         while curr_pos < len(track_data):
             sect_header = struct.unpack_from('<BBBBHBBB5xH', track_data, curr_pos)
@@ -90,15 +44,64 @@ class FLOPPY_DISK_D88:
             curr_pos += 0x10                            # skip the header
             sect_data = track_data[curr_pos: curr_pos+data_size]
             curr_pos += data_size
-            res = { 'C':C, 'H':H, 'R':R, 'N':N }
+            res = { 'sect_idx': sect_idx }
+            res.update({'C':C, 'H':H, 'R':R, 'N':N })
             res.update({'num_sectors': num_sectors})
             res.update({'density': density})
             res.update({'data_mark': data_mark})
             res.update({'status': status})
             res.update({'data_size': data_size})
             res.update({'sect_data': sect_data})
+            sect_idx += 1
             sectors.append(res)
         return sectors
+
+    def parse_image(self):
+        image_pos = 0
+        total_image_size = len(self.image_data)
+        while image_pos < total_image_size:
+            d88header = struct.unpack_from('<17s9xBBI164I', self.image_data, 0)
+            disk_name, write_protect, disk_type, disk_size = d88header[:4]
+            track_table = d88header[4:]
+            image_data = self.image_data[image_pos : image_pos + disk_size + 1]
+            disk_image = FLOPPY_DISK_D88()
+            disk_image.set_meta_data(disk_name = disk_name,
+                                      write_protect = write_protect,
+                                      disk_type = disk_type)
+            for track in range(164):        # D88 image max track num == 163
+                track_ofst = track_table[track]
+                if track_ofst != 0:
+                    if track < 163:
+                        track_end = track_table[track + 1]
+                    else:
+                        track_end = disk_size
+                    track_size = track_end - track_ofst
+                    track_data = image_data[track_ofst : track_end]
+                else:
+                    track_size = 0
+                    track_data = []
+
+                sectors = self.parse_sectors(track_data)
+                disk_image.tracks[track] = sectors
+            
+            self.images.append(disk_image)
+            image_pos += disk_size 
+ 
+
+
+
+
+class FLOPPY_DISK_D88:
+    def __init__(self):
+        self.image_data = None
+        self.optional_args = {}
+        self.sect_per_track = 16
+        self.tracks = [[] for _ in range(164)]
+
+    def set_meta_data(self, disk_name, write_protect, disk_type):
+        self.disk_name = disk_name
+        self.write_protect = write_protect
+        self.disk_type = disk_type
 
     def read_sector(self, track, sect_id, ignoreCH = True):
         """
@@ -110,10 +113,8 @@ class FLOPPY_DISK_D88:
         """
         if track < 0 or track >= len(self.tracks):
             raise ValueError
-        track_data = self.tracks[track]
-        num_sectors = track_data['sectors'][0]['num_sectors']       # number of sectors in the track
         C, H, R = sect_id
-        for sect in track_data['sectors']:
+        for sect in self.tracks[track]:
             match = False
             if ignoreCH:
                 if sect['R'] == R:
@@ -144,9 +145,9 @@ class FLOPPY_DISK_D88:
         if track < 0 or track >= len(self.tracks):
             raise ValueError
         track_data = self.tracks[track]
-        num_sectors = track_data['sectors'][0]['num_sectors']       # number of sectors in the track
+        num_sectors = track_data[0]['num_sectors']       # obtain number of sectors in the track from the 1st sector data
         if sect_idx < num_sectors:
-            sect = track_data['sectors'][sect_idx]
+            sect = track_data[sect_idx]
             return sect
         return None
 
@@ -167,16 +168,19 @@ class FLOPPY_DISK_D88:
             print(f'WARNING: data size is rounded up to power of 2 ({len(write_data)} -> {data_size})')
             write_data.extend(bytearray(data_size - len(write_data)))
         if sect is not None:
+            #sect['sect_idx'] = x       # no change
             sect['sect_data'] = write_data
             sect['data_size'] = len(write_data)
             sect['status'] = status
             sect['data_mark'] = data_mark
             sect['density'] = density
             #sect['num_sectors']        # no change
+            assert id(sect) == id(self.tracks[track][sect['sect_idx']])
         elif create_new:
             C, H, R = sect_id
             N = int(math.log(len(write_data))/math.log(2))-7
             new_sector = {
+                'sect_idx': len(self.tracks),
                 'C': C,
                 'H': H,
                 'R': R,
@@ -188,9 +192,9 @@ class FLOPPY_DISK_D88:
                 'data_size': len(write_data),
                 'sect_data': write_data
             }
-            self.tracks[track]['sectors'].append(new_sector)
+            self.tracks[track].append(new_sector)
             # Adjust the number of sectors parameter
-            num_sectors = len(self.tracks[track]['sectors'])
+            num_sectors = len(self.tracks[track])
             for sect in self.tracks[track]['sectors']:
                 sect['num_sectors'] = num_sectors
 
@@ -217,12 +221,36 @@ class FLOPPY_DISK_D88:
             print(f'WARNING: data size is rounded up to power of 2 ({len(write_data)} -> {data_size})')
             write_data.extend(bytearray(data_size - len(write_data)))
         if sect is not None:
+            #sect['sect_idx'] = x       # no change
             sect['sect_data'] = write_data
             sect['data_size'] = len(write_data)
             sect['status'] = status
             sect['data_mark'] = data_mark
             sect['density'] = density
             #sect['num_sectors']        # no change
+            assert id(sect) == id(self.tracks[track][sect['sect_idx']])
 
-    def serialize(self):
-        
+    def encode_to_hex(self, data):
+        res = ''
+        for dt in data:
+            res += f'{dt:02x} '
+        if res != '':
+            res = res[:-1]
+        return res
+
+    def serialize(self, format='yaml', hex_dump=False):
+        tracks_copy = self.tracks.copy()
+        # Encode sector data
+        for track in tracks_copy:
+            for sect in track:
+                if hex_dump:
+                    sect['sect_data'] = self.encode_to_hex(sect['sect_data'])
+                else:
+                    sect['sect_data'] = base64.b64encode(sect['sect_data']).decode()
+        match format:
+            case 'json' | 'JSON':
+                return json.dumps(tracks_copy, indent=4)
+            case 'yaml' | 'YAML':
+                return yaml.dump_all(self.tracks)
+            case _:
+                raise ValueError
