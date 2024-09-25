@@ -59,3 +59,11 @@ fs.dump_FAT()
 
 serialized_data = disk_image.serialize('json')
 print(serialized_data)
+
+#new_disk = FLOPPY_DISK_D88()
+#new_disk.create_new_disk()
+
+new_image = FLOPPY_IMAGE_D88()
+new_image.create_add_new_empty_image()
+new_disk = new_image.images[0]
+print(new_disk.read_sector_LBA(16))

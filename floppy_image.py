@@ -10,6 +10,7 @@ class FLOPPY_IMAGE_D88:
     def __init__(self):
         self.image_data = None
         self.images = []
+        self.d88_max_track = 164
 
     def read_file(self, file_name):
         if not os.path.isfile(file_name):
@@ -60,7 +61,7 @@ class FLOPPY_IMAGE_D88:
         image_pos = 0
         total_image_size = len(self.image_data)
         while image_pos < total_image_size:
-            d88header = struct.unpack_from('<17s9xBBI164I', self.image_data, 0)
+            d88header = struct.unpack_from(f'<17s9xBBI{self.d88_max_track}I', self.image_data, 0)
             disk_name, write_protect, disk_type, disk_size = d88header[:4]
             track_table = d88header[4:]
             image_data = self.image_data[image_pos : image_pos + disk_size + 1]
@@ -68,7 +69,7 @@ class FLOPPY_IMAGE_D88:
             disk_image.set_meta_data(disk_name = disk_name,
                                       write_protect = write_protect,
                                       disk_type = disk_type)
-            for track in range(164):        # D88 image max track num == 163
+            for track in range(self.d88_max_track):        # D88 image max track num == 163
                 track_ofst = track_table[track]
                 if track_ofst != 0:
                     if track < 163:
@@ -87,7 +88,10 @@ class FLOPPY_IMAGE_D88:
             self.images.append(disk_image)
             image_pos += disk_size 
  
-
+    def create_add_new_empty_image(self):
+        new_image = FLOPPY_DISK_D88()
+        new_image.create_new_disk()
+        self.images.append(new_image)
 
 
 
@@ -96,7 +100,8 @@ class FLOPPY_DISK_D88:
         self.image_data = None
         self.optional_args = {}
         self.sect_per_track = 16
-        self.tracks = [[] for _ in range(164)]
+        self.d88_max_track = 164
+        self.tracks = [[] for _ in range(self.d88_max_track)]
 
     def set_meta_data(self, disk_name, write_protect, disk_type):
         self.disk_name = disk_name
@@ -151,6 +156,18 @@ class FLOPPY_DISK_D88:
             return sect
         return None
 
+    def adjust_num_sectors(self, track):
+        """
+        Adjust the number of sectors parameter
+        """
+        num_sectors = len(track)
+        for sect in track:
+            sect['num_sectors'] = num_sectors
+
+    def renumber_sect_idx(self, track):
+        for idx, sect in enumerate(track):
+            sect['sect_idx'] = idx
+
     def write_sector(self, track, sect_id = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
         """
         Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.  
@@ -193,10 +210,8 @@ class FLOPPY_DISK_D88:
                 'sect_data': write_data
             }
             self.tracks[track].append(new_sector)
-            # Adjust the number of sectors parameter
-            num_sectors = len(self.tracks[track])
-            for sect in self.tracks[track]['sectors']:
-                sect['num_sectors'] = num_sectors
+            self.adjust_num_sectors(self.tracks[track])
+            self.renumber_sect_idx(self.tracks[track])
 
     def write_sector_LBA(self, LBA, write_data=None, density=0x00, data_mark=0x00, status=0x00, create_new=False):
         """
@@ -237,6 +252,46 @@ class FLOPPY_DISK_D88:
         if res != '':
             res = res[:-1]
         return res
+
+    def create_new_sector(self, C, H, R, N, status, data_mark, density, sect_idx=-1, num_sectors=-1):
+            sect_data_size = 2 ** (7+N)
+            sect_data = bytearray([0x00] * sect_data_size)
+            sect = {
+                'sect_idx': sect_idx,
+                'C': C,
+                'H': H,
+                'R': R,
+                'N': N,
+                'sect_data': sect_data,
+                'data_size': sect_data_size,
+                'status': status,
+                'data_mark': data_mark,
+                'density': density,
+                'num_sectors': num_sectors
+            }
+            return sect
+
+    def create_new_track(self, C, H):
+        track = []
+        for R in range(1, 16+1):
+            sect = self.create_new_sector(C, H, R, 1, status=0x00, data_mark=0x00, density=0x00)
+            track.append(sect)
+        self.adjust_num_sectors(track)
+        self.renumber_sect_idx(track)
+        return track
+
+    def create_new_disk(self, max_valid_track_num = 79):
+        tracks = []
+        for track_num in range(self.d88_max_track):
+            if track_num <= max_valid_track_num:
+                C = track_num // 2
+                H = track_num % 2
+                new_track = self.create_new_track(C, H)
+            else:
+                new_track = []          # No sector
+            tracks.append(new_track)
+        self.tracks = tracks
+        return tracks
 
     def serialize(self, format='yaml', hex_dump=False):
         tracks_copy = self.tracks.copy()
