@@ -2,60 +2,23 @@ import os
 import struct
 import math
 
-class FD_IMAGE:
+import yaml
+
+class FLOPPY_IMAGE_D88:
     def __init__(self):
         self.image_data = None
-        pass
+        self.images = []
 
     def read_file(self, file_name):
         if not os.path.isfile(file_name):
             raise FileNotFoundError
         self.image_data = open(file_name, 'rb').read()
-    
+        self.parse_image()
+
     def write_file(self, file_name):
         if self.image_data == None:
             return
         open(file_name, 'wb').write(self.image_data)
-
-    def parse_image(self):
-        raise NotImplementedError
-
-
-class FLOPPY_DISK:
-    def __init__(self):
-        self.image_data = None
-        self.optional_args = {}
-
-    def set_image_data(self, data, **kwargs):
-        self.data = data
-        self.optional_args = kwargs
-
-    def parse(self):
-        return NotImplementedError        
-
-    def read_sector(self, track, sect_id=None, sect_idx=None, ignoreCH=True):
-        raise NotImplementedError
-
-    def read_track(self, C, H):
-        raise NotImplementedError
-
-    def write_sector(self, C, H, R, data):
-        raise NotImplementedError
-
-    def write_track(self, C, H, data):
-        raise NotImplementedError
-
-
-
-
-class FLOPPY_IMAGE_D88(FD_IMAGE):
-    def __init__(self):
-        super().__init__()
-        self.images = []
-
-    def read_file(self, file_name):
-        super().read_file(file_name)
-        self.parse_image()
 
     def parse_image(self):
         image_pos = 0
@@ -80,13 +43,15 @@ class FLOPPY_IMAGE_D88(FD_IMAGE):
 
 
 
-class FLOPPY_DISK_D88(FLOPPY_DISK):
+class FLOPPY_DISK_D88:
     def __init__(self):
-        super().__init__()
+        self.image_data = None
+        self.optional_args = {}
         self.sect_per_track = 16
 
     def set_image_data(self, data, **kwargs):
-        super().set_image_data(data, **kwargs)
+        self.data = data
+        self.optional_args = kwargs
         self.parse()
 
     def parse(self):
@@ -259,3 +224,5 @@ class FLOPPY_DISK_D88(FLOPPY_DISK):
             sect['density'] = density
             #sect['num_sectors']        # no change
 
+    def serialize(self):
+        

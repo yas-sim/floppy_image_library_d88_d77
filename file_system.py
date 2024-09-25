@@ -393,6 +393,8 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             case _:
                 return { 'file_type':-1 }
 
+    def logical_format(self):
+        pass
 
 
     def dump_directory(self):
