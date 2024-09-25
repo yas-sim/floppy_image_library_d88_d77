@@ -1,6 +1,8 @@
 from ascii_j import *
 
-def dump_data(data:bytearray):
+def dump_data(data:any):
+    if type(data) != bytearray:
+        data = bytearray(data)
     ascii_buf = ''
     for count, dt in enumerate(data):
         if count % 16 == 0:

@@ -57,8 +57,9 @@ fs.write_file('SHIMURA', dummy, 0, 0, 0)
 fs.dump_valid_directory()
 fs.dump_FAT()
 
-serialized_data = disk_image.serialize('json')
-print(serialized_data)
+if False:
+    serialized_data = disk_image.serialize('json')
+    print(serialized_data)
 
 #new_disk = FLOPPY_DISK_D88()
 #new_disk.create_new_disk()
@@ -67,3 +68,18 @@ new_image = FLOPPY_IMAGE_D88()
 new_image.create_add_new_empty_image()
 new_disk = new_image.images[0]
 print(new_disk.read_sector_LBA(16))
+fs.set_image(new_disk)
+fs.logical_format()
+print(fs.check_disk_id())
+print(fs.image.read_sector_LBA(2))
+fs.dump_valid_directory()
+fs.write_file('TEST_FILE', dummy, 0, 0, 0)
+fs.dump_valid_directory()
+fs.dump_FAT()
+
+fat = fs.read_FAT()
+dump_data(fat)
+print()
+
+data = disk_image.read_sector_LBA(2)['sect_data']
+dump_data(data)

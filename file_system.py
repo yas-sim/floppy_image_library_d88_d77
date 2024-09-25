@@ -11,13 +11,18 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
     def __init__(self):
         self.sect_per_cluster = 8
         self.sect_per_track = 16
+        self.image = None
         super().__init__()
+
+    def check_disk_id(self):
+        id_sect = self.image.read_sector(0, (0, 0, 3))
+        dump_data(id_sect['sect_data'])
+        if id_sect['sect_data'][0] != ord('S'):
+            return False
+        return True
 
     def set_image(self, image:FLOPPY_DISK_D88):
         self.image = image
-        id_sect = image.read_sector(0, (0, 0, 3))
-        if id_sect['sect_data'][0] != ord('S'):
-            print('ERROR: Wrong disk ID. Not a F-BASIC disk.')
 
 
 
@@ -393,8 +398,29 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             case _:
                 return { 'file_type':-1 }
 
+
+
+
     def logical_format(self):
-        pass
+        # Create IPL
+        data = bytearray([0x20, 0xfe] + [0x00] * (256-2))       # BRA * == 0x20 0xFE
+        self.image.write_sector_LBA(0, data)
+
+        # Create disk ID
+        data = bytearray(list('SYS'.encode()) + [0x00]*(256-3)) # 'SYS' == Disk ID
+        self.image.write_sector_LBA(2, data)
+
+        # Create FAT
+        #data = bytearray([0x00, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xfe, 0xfe, 0xfe] + [0xff] * (256-9))
+        data = bytearray([0x00] + [0xff] * (256-1))
+        self.write_FAT(data)        # LBA = 32
+
+        # Create empty directory entries
+        data = bytearray([0xff] * 256)
+        for sect_ofst in range(32 - 3):      # 3 == FAT + reserve + reserve
+            self.image.write_sector_LBA(32 + 3 + sect_ofst, data)
+
+
 
 
     def dump_directory(self):
