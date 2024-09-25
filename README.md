@@ -14,30 +14,17 @@ This class represents a floppy disk image file that may contain multiple floppy 
 This class represents the data of a single floppy disk.
 |Name|Description|Note|
 |---|---|---|
-|`self.optional_args['disk_name']`|Disk name|16 characters max|
-|`self.optional_args['write_protect']`|Write protect flag|0x00: No protect<br>0x10: Write protected|
-|`self.optional_args['disk_type']`|Disk type|0x00: 2D<br>0x10: 2DD<br>0x20: 2HD|
-|`self.optional_args['disk_size']`|Size of the image data||
-|`self.optional_args['track_table'][]`|Offset to the track data from the top of the image data. 0 ~ 163 track.||
+|`self.disk_name`|Disk name|16 characters max|
+|`self.write_protect`|Write protect flag|0x00: No protect<br>0x10: Write protected|
+|`self.disk_type`|Disk type|0x00: 2D<br>0x10: 2DD<br>0x20: 2HD|
+|`self.tracks[[],[],[],...]`|Track data|A list consists of lists of 'sector data'|
 
-
-### Track data
-
-|Name|Description|Note|
-|---|---|---|
-|`tracks[]`|Track data|List of 'Sector data'||
-
-**Obsoleted**
-|Name|Description|Note|
-|---|---|---|
-|`track_size`|Track size|Size of the track_data|
-|`track_data`|Track data|The track data consists of multiple sector data. The sector data are simply concatenated back to back. (bytearray)|
-|`sectors[]`|List of 'Sector data'||
 
 
 ### Sector data
 |Name|Description|Note|
 |---|---|---|
+|`sect_idx`|Index number of the sector|Sector number in a track. Starts with 0.|
 |`C`|Cylinder #||
 |`H`|Head #||
 |`R`|Sector ID||
@@ -130,12 +117,13 @@ When a file is deleted, the top of the file name is set to 0x00, and the used cl
 -----------------------------
 ## Bin list
 - Image write back
-- New image creation
+- Done - New image creation
 - File attribute check on write_file
-- Disk full detection on wite_file
+- Done - Disk full detection on wite_file
 - Sector read error handling
 - File access by dir_idx
 - File access CLI commands
 - Motorola-S decoding encoding
-- Image sserialization
+- Done - Image sserialization
+- Image deserialization
 - GUI ?
