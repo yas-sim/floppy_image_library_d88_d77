@@ -193,7 +193,7 @@ test_set = [
     'test_serialize_deserialize',
     'test_read_file_by_idx'
 ]
-match 2:
+match 0:
     case 0:
         unittest.main()
     case 1:
