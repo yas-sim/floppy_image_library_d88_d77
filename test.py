@@ -160,24 +160,27 @@ class TestDiskImage(unittest.TestCase):
 
 
     def test_serialize_deserialize(self):
-        file_name = 'test.yaml'
-        hex_dump = True
-        if True:
-            new_image = FLOPPY_IMAGE_D88()
-            new_image.read_file(TestDiskImage.test_image_file)
-            new_disk = new_image.images[0]
-            t = timeit.timeit(lambda: new_disk.serialize(file_name, hex_dump=hex_dump), number=1)
-            print(t)
-            del new_image
+        file_names = [ 'test.yaml', 'test.json' ]
+        hex_dumps = [ True, False ]
+        for file_name in file_names:
+            for hex_dump in hex_dumps:
+                print(f'file name:{file_name}, hex dump:{hex_dump}')
+                if True:
+                    new_image = FLOPPY_IMAGE_D88()
+                    new_image.read_file(TestDiskImage.test_image_file)
+                    new_disk = new_image.images[0]
+                    t = timeit.timeit(lambda: new_disk.serialize(file_name, hex_dump=hex_dump), number=1)
+                    print(t)
+                    del new_image
 
-        if True:
-            new_disk = FLOPPY_DISK_D88()
-            t = timeit.timeit(lambda: new_disk.deserialize(file_name, hex_dump=hex_dump), number=1)
-            print(t)
+                if True:
+                    new_disk = FLOPPY_DISK_D88()
+                    t = timeit.timeit(lambda: new_disk.deserialize(file_name, hex_dump=hex_dump), number=1)
+                    print(t)
 
-            fs = FM_FILE_SYSTEM()
-            fs.set_image(new_disk)
-            fs.dump_valid_directory()
+                    fs = FM_FILE_SYSTEM()
+                    fs.set_image(new_disk)
+                    fs.dump_valid_directory()
 
 # ===================================================================
 
