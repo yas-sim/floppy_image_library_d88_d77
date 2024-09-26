@@ -100,11 +100,40 @@ class TestDiskImage(unittest.TestCase):
         dirs = fs.get_valid_directory_entries()
         assert len(dirs) == 2
 
-
     def test_serialize_image(self):
         new_image = create_new_image()
         new_disk = new_image.images[0]
         serialized_data = new_disk.serialize('yaml', hex_dump=True)
         #print(serialized_data)
+
+    def test_basic_image_access(self):
+        new_image = create_new_image()
+        new_disk = new_image.images[0]
+
+        data = bytearray(range(256))
+        new_disk.write_sector_LBA(2, data)
+        data = data[::-1]
+        new_disk.write_sector(0, (0,0,1), data)
+
+        data = new_disk.read_sector_LBA(2)
+        print(data)
+        data = new_disk.read_sector(0, (0, 0, 1))
+        print(data)
+
+    def test_write_image(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file('fb_toolbox.d77')
+
+        disk_image = image_file.images[0]
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(disk_image)
+        data = fs.read_file('ASM09EB')
+        print("data", len(data['data']))
+        fs.dump_FAT()
+        fs.write_file('ASM09CP', data['data'], data['file_type'], data['ascii_flag'], data['random_access_flag'])
+        fs.dump_valid_directory()
+        image_file.write_file('test.d77')
+        fs.dump_FAT()
 
 unittest.main()

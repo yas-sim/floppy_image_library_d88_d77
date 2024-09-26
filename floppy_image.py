@@ -9,7 +9,7 @@ import json
 class FLOPPY_IMAGE_D88:
     def __init__(self):
         self.image_data = None
-        self.images = []
+        self.images:FLOPPY_DISK_D88 = []
         self.d88_max_track = 164
 
     def read_file(self, file_name):
@@ -20,14 +20,9 @@ class FLOPPY_IMAGE_D88:
         self.parse_image()
 
     def write_file(self, file_name):
-        if self.image_data == None:
-            return
-        self.prepare_image_data()
+        self.reconstruct_image()
         with open(file_name, 'wb') as f:
             f.write(self.image_data)
-
-    def prepare_image_data(self):
-        raise NotImplementedError
 
     def parse_sectors(self, track_data):
         """
@@ -92,8 +87,20 @@ class FLOPPY_IMAGE_D88:
  
     def create_and_add_new_empty_image(self):
         new_image = FLOPPY_DISK_D88()
+        new_image.disk_name = 'NEW IMAGE       '
+        new_image.disk_type = 0x00          # 2D
+        new_image.write_protect = 0x00      # No protect
         new_image.create_new_disk()
         self.images.append(new_image)
+
+    def reconstruct_image(self):
+        """
+        Reconstruct self.image_data from current contents.
+        """
+        self.image_data = bytearray()
+        for image in self.images:
+            new_disk_image = image.reconstruct_image_data()
+            self.image_data += new_disk_image
 
 
 
@@ -311,3 +318,46 @@ class FLOPPY_DISK_D88:
                 return yaml.dump_all(self.tracks)
             case _:
                 raise ValueError
+
+    def reconstruct_sector_image(self, sect) -> bytes:
+        sect_hdr = struct.pack('<BBBBHBBB5xH', 
+                               sect['C'],
+                               sect['H'],
+                               sect['R'],
+                               sect['N'],
+                               sect['num_sectors'],
+                               sect['density'],
+                               sect['data_mark'],
+                               sect['status'],
+                               sect['data_size'])
+        sect_img = sect_hdr + sect['sect_data']
+        return sect_img 
+
+    def reconstruct_image_data(self):
+        """
+        Reconstruct single D88 disk image data from current contents of this object.
+        """
+        disk_name = self.disk_name
+        if len(disk_name) < 16:
+            disk_name += " " * (16-len(disk_name))
+        disk_name = disk_name[:16] + bytes([0])
+        d88_hdr = struct.pack(f'<17s9xBBI', disk_name, self.write_protect, self.disk_type, 0)
+
+        all_track_img = bytearray()
+        track_table_img = bytearray()
+        size_of_d88_hdr = len(d88_hdr)
+        size_of_track_table = self.d88_max_track * 4
+        for track in range(self.d88_max_track):
+            track_img = bytearray()
+            if len(self.tracks[track]) > 0:
+                for sect in self.tracks[track]:
+                    sect_img = self.reconstruct_sector_image(sect)
+                    track_img += sect_img
+                track_table_img += struct.pack('<I', size_of_d88_hdr + size_of_track_table + len(all_track_img))
+            else:
+                track_table_img += struct.pack('<I', 0)
+            all_track_img += track_img
+
+        disk_image = bytearray( d88_hdr + track_table_img + all_track_img )
+        struct.pack_into('<I', disk_image, 0x1c, len(disk_image))               # Total disk image size
+        return disk_image

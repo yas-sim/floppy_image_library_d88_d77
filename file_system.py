@@ -61,7 +61,7 @@ class FM_FILE_SYSTEM:
 
     def read_FAT(self):
         FAT = self.image.read_sector(2, (1, 0, 1))['sect_data']
-        return FAT
+        return bytearray(FAT)
 
     def write_FAT(self, FAT_data):
         self.image.write_sector(2, (1, 0, 1), FAT_data)
@@ -335,11 +335,13 @@ class FM_FILE_SYSTEM:
         prev_cluster = -1
         while True:
             assert len(write_data) % 256 == 0
+            self.write_FAT(FAT)                                 # Write back FAT before searching for an empty cluster
             current_cluster = self.find_empty_cluster()
             assert current_cluster != -1                        # Disk full
             if top_cluster == -1:
                 top_cluster = current_cluster                   # Memorize the top cluster nunber
             if prev_cluster != -1:
+                assert prev_cluster != current_cluster
                 FAT[prev_cluster + 5] = current_cluster
             LBA = self.cluster_to_LBA(current_cluster)
             for sect_count in range(self.sect_per_cluster):
