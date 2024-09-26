@@ -288,7 +288,6 @@ class FM_FILE_SYSTEM:
         return True
 
     def validate_file_name(self, file_name):
-        print(file_name)
         if file_name == None:
             return False
         if type(file_name) not in (str, bytes, bytearray):

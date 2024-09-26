@@ -116,14 +116,14 @@ When a file is deleted, the top of the file name is set to 0x00, and the used cl
 
 -----------------------------
 ## Bin list
-- Image write back
-- Done - New image creation
-- File attribute check on write_file
-- Done - Disk full detection on wite_file
-- Sector read error handling
-- File access by dir_idx
-- File access CLI commands
-- Motorola-S decoding encoding
-- Done - Image sserialization
-- Image deserialization
-- GUI ?
+- ☐ Image write back
+- ☑ New image creation
+- ☐ File attribute check on write_file
+- ☑ Disk full detection on wite_file
+- ☐ Sector read error handling
+- ☐ File access by dir_idx
+- ☐ File access CLI commands
+- ☐ Motorola-S decoding encoding
+- ☑ Image sserialization
+- ☐ Image deserialization
+- ☐ GUI ?

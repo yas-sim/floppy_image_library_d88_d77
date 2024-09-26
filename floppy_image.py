@@ -15,14 +15,16 @@ class FLOPPY_IMAGE_D88:
     def read_file(self, file_name):
         if not os.path.isfile(file_name):
             raise FileNotFoundError
-        self.image_data = open(file_name, 'rb').read()
+        with open(file_name, 'rb') as f:
+            self.image_data = f.read()
         self.parse_image()
 
     def write_file(self, file_name):
         if self.image_data == None:
             return
         self.prepare_image_data()
-        open(file_name, 'wb').write(self.image_data)
+        with open(file_name, 'wb') as f:
+            f.write(self.image_data)
 
     def prepare_image_data(self):
         raise NotImplementedError

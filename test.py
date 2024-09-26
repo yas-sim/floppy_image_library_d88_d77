@@ -1,85 +1,106 @@
+import unittest
+
 from floppy_image import *
 from file_system import *
-from misc import *
-
-image_file = FLOPPY_IMAGE_D88()
-#image.read_file('fb_toolbox.d77')
-#image_file.read_file('Expert FM.D77')
-image_file.read_file('cdos7v2.d77')
-
-disk_image = image_file.images[0]
-
-if False:
-    print(disk_image.read_sector(0, (0,0,1)))
-
-    disk_image.write_sector(0, None, 15, write_data = bytearray(256), create_new=True)
-    print(disk_image.read_sector(0, (0,0,0x11)))
-
-fs = FM_FILE_SYSTEM()
-fs.set_image(disk_image)
-if True:
-   #fs.dump_directory()
-   fs.dump_valid_directory()
-   fs.dump_FAT()
-
-#print(fs.read_FAT())
-#print(fs.image.read_sector(2, (1,0,4)))
-
-data = fs.read_file('EXMON')
-print()
-print(data)
-
-data = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
-print('\ncontents')
-print(data)
-
 from fbasic_utils import *
 
-basic_text = F_BASIC_IR_decode(data['data'])
-print()
-print(basic_text)
+from misc import *
 
-fs.dump_valid_directory()
-fs.dump_FAT()
+class TestDiskImage(unittest.TestCase):
+    test_image_file = 'fb_toolbox.d77'
 
-#print(fs.find_empty_directory_slot())
-#print(fs.get_directory_entry_idx('XFER'))
+    def test_file_load(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file(TestDiskImage.test_image_file)
 
-fs.delete_file('XFER')
-fs.dump_valid_directory()
-fs.dump_FAT()
+        disk_image = image_file.images[0]
 
-#fs.create_directory_entry(fs.normalize_file_name('SHIMURA'), 0, 0, 0)
-#fs.dump_valid_directory()
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(disk_image)
+        fs.dump_valid_directory()
+        fs.dump_FAT()
 
-dummy = bytearray([0x02 for _ in range(19700)])
-fs.write_file('SHIMURA', dummy, 0, 0, 0)
-fs.dump_valid_directory()
-fs.dump_FAT()
+    def test_image_access(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file(TestDiskImage.test_image_file)
 
-if False:
-    serialized_data = disk_image.serialize('json')
-    print(serialized_data)
 
-#new_disk = FLOPPY_DISK_D88()
-#new_disk.create_new_disk()
+    def test_basic_ir_decoding(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file('fb_toolbox.d77')
 
-new_image = FLOPPY_IMAGE_D88()
-new_image.create_add_new_empty_image()
-new_disk = new_image.images[0]
-print(new_disk.read_sector_LBA(16))
-fs.set_image(new_disk)
-fs.logical_format()
-print(fs.check_disk_id())
-print(fs.image.read_sector_LBA(2))
-fs.dump_valid_directory()
-fs.write_file('TESTFILE', dummy, 0, 0, 0)
-fs.dump_valid_directory()
-fs.dump_FAT()
+        disk_image = image_file.images[0]
 
-fat = fs.read_FAT()
-dump_data(fat)
-print()
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(disk_image)
+        fs.dump_valid_directory()
+        fs.dump_FAT()
 
-data = disk_image.read_sector_LBA(2)['sect_data']
-dump_data(data)
+        data = fs.read_file('ASM09')
+        basic_ir = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
+        basic_text = F_BASIC_IR_decode(basic_ir['data'])
+        print()
+        print(basic_text)
+
+    def test_create_new_image(self):
+        new_image = FLOPPY_IMAGE_D88()
+        new_image.create_add_new_empty_image()
+        new_disk = new_image.images[0]
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(new_disk)
+        fs.logical_format()
+        print(fs.check_disk_id())
+        print(fs.image.read_sector_LBA(2))
+        fs.dump_valid_directory()
+        fs.dump_FAT()
+
+    def test_create_new_file(self):
+        new_image = FLOPPY_IMAGE_D88()
+        new_image.create_add_new_empty_image()
+        new_disk = new_image.images[0]
+        print(new_disk.read_sector_LBA(16))
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(new_disk)
+        fs.logical_format()
+        print(fs.check_disk_id())
+        print(fs.image.read_sector_LBA(2))
+        dummy = bytearray([0x02 for _ in range(256 * 20)])
+        fs.dump_valid_directory()
+        fs.write_file('TESTFILE', dummy, 0, 0, 0)
+        fs.dump_valid_directory()
+        fs.dump_FAT()
+
+    def test_delete_file(self):
+        new_image = FLOPPY_IMAGE_D88()
+        new_image.create_add_new_empty_image()
+        new_disk = new_image.images[0]
+        print(new_disk.read_sector_LBA(16))
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(new_disk)
+        fs.logical_format()
+        print(fs.check_disk_id())
+        print(fs.image.read_sector_LBA(2))
+        dummy = bytearray([0x02 for _ in range(256 * 20)])
+        fs.dump_valid_directory()
+        fs.write_file('FILE1', dummy, 0, 0, 0)
+        fs.write_file('FILE2', dummy, 0, 0, 0)
+        fs.write_file('FILE3', dummy, 0, 0, 0)
+        fs.dump_valid_directory()
+        fs.delete_file('FILE2')
+        fs.dump_valid_directory()
+        fs.dump_FAT()
+        dirs = fs.get_valid_directory_entries()
+        assert len(dirs) == 2
+
+
+    def test_serialize_image(self):
+        new_image = FLOPPY_IMAGE_D88()
+        new_image.create_add_new_empty_image()
+        new_disk = new_image.images[0]
+        serialized_data = new_disk.serialize('yaml', hex_dump=True)
+        #print(serialized_data)
+
+unittest.main()
