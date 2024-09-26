@@ -254,14 +254,6 @@ class FLOPPY_DISK_D88:
             #sect['num_sectors']        # no change
             assert id(sect) == id(self.tracks[track][sect['sect_idx']])
 
-    def encode_to_hex(self, data):
-        res = ''
-        for dt in data:
-            res += f'{dt:02x} '
-        if res != '':
-            res = res[:-1]
-        return res
-
     def create_new_sector(self, C, H, R, N, status, data_mark, density, sect_idx=-1, num_sectors=-1):
             sect_data_size = 2 ** (7+N)
             sect_data = bytearray([0x00] * sect_data_size)
@@ -302,7 +294,31 @@ class FLOPPY_DISK_D88:
         self.tracks = tracks
         return tracks
 
-    def serialize(self, format='yaml', hex_dump=False):
+
+
+    def encode_to_hex(self, data):
+        res = ''
+        for dt in data:
+            res += f'{dt:02x} '
+        if res != '':
+            res = res[:-1]
+        return res
+
+    def decode_from_hex(self, data:str) -> bytearray:
+        res = []
+        data = data.replace(' ', '')
+        assert len(data) % 2 == 0
+        for pos in range(0, len(data), 2):
+            hex_str = data[pos:pos+1+1]
+            val = int(hex_str, 16)
+            res.append(val)
+        return bytearray(res)
+
+
+
+    def serialize(self, file_name:str, hex_dump=False):
+        root, ext = os.path.splitext(file_name)
+        ext = ext.upper()
         tracks_copy = self.tracks.copy()
         # Encode sector data
         for track in tracks_copy:
@@ -311,13 +327,34 @@ class FLOPPY_DISK_D88:
                     sect['sect_data'] = self.encode_to_hex(sect['sect_data'])
                 else:
                     sect['sect_data'] = base64.b64encode(sect['sect_data']).decode()
-        match format:
-            case 'json' | 'JSON':
-                return json.dumps(tracks_copy, indent=4)
-            case 'yaml' | 'YAML':
-                return yaml.dump_all(self.tracks)
-            case _:
-                raise ValueError
+        with open(file_name, 'wt') as f:
+            match ext:
+                case '.JSON':
+                    json.dump(tracks_copy, f, indent=4)
+                case '.YAML' | '.YML':
+                    yaml.dump(self.tracks, f)
+                case _:
+                    raise ValueError
+
+    def deserialize(self, file_name:str, hex_dump=False):
+        root, ext = os.path.splitext(file_name)
+        ext = ext.upper()
+        with open(file_name, 'rt') as f:
+            match ext:
+                case '.JSON':
+                    tracks = json.load(f)
+                case '.YAML' | '.YML':
+                    tracks = yaml.safe_load(f)
+                case _:
+                    raise ValueError
+        # Decode sector data
+        for track in tracks:
+            for sect in track:
+                if hex_dump:
+                    sect['sect_data'] = self.decode_from_hex(sect['sect_data'])
+                else:
+                    sect['sect_data'] = base64.b64decode(sect['sect_data'])
+        self.tracks = tracks
 
     def reconstruct_sector_image(self, sect) -> bytes:
         sect_hdr = struct.pack('<BBBBHBBB5xH', 

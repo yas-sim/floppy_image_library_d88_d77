@@ -103,8 +103,7 @@ class TestDiskImage(unittest.TestCase):
     def test_serialize_image(self):
         new_image = create_new_image()
         new_disk = new_image.images[0]
-        serialized_data = new_disk.serialize('yaml', hex_dump=True)
-        #print(serialized_data)
+        new_disk.serialize('test.yaml', hex_dump=True)
 
     def test_basic_image_access(self):
         new_image = create_new_image()
@@ -136,4 +135,26 @@ class TestDiskImage(unittest.TestCase):
         image_file.write_file('test.d77')
         fs.dump_FAT()
 
+    def test_serialize_deserialize(self):
+        file_name = 'test.yaml'
+        hex_dump = False
+        if True:
+            new_image = FLOPPY_IMAGE_D88()
+            new_image.read_file(TestDiskImage.test_image_file)
+            new_disk = new_image.images[0]
+            new_disk.serialize(file_name, hex_dump=hex_dump)
+            del new_image
+
+        if True:
+            new_image = FLOPPY_IMAGE_D88()
+            new_image.create_and_add_new_empty_image()
+            new_disk = new_image.images[0]
+            new_disk.deserialize(file_name, hex_dump=hex_dump)
+
+            fs = FM_FILE_SYSTEM()
+            fs.set_image(new_disk)
+            fs.dump_valid_directory()
+
 unittest.main()
+
+#unittest.main(TestDiskImage, defaultTest='test_serialize_deserialize')
