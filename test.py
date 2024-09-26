@@ -73,7 +73,7 @@ fs.logical_format()
 print(fs.check_disk_id())
 print(fs.image.read_sector_LBA(2))
 fs.dump_valid_directory()
-fs.write_file('TEST_FILE', dummy, 0, 0, 0)
+fs.write_file('TESTFILE', dummy, 0, 0, 0)
 fs.dump_valid_directory()
 fs.dump_FAT()
 

@@ -2,17 +2,16 @@ from floppy_image import *
 from ascii_j import *
 from misc import *
 
-class FILE_SYSTEM:
-    def __init__(self):
-        pass
 
-
-class FM_FILE_SYSTEM(FILE_SYSTEM):
+class FM_FILE_SYSTEM:
     def __init__(self):
         self.sect_per_cluster = 8
         self.sect_per_track = 16
+        self.max_cluster_num = 151
         self.image = None
-        super().__init__()
+
+    def set_image(self, image:FLOPPY_DISK_D88):
+        self.image = image
 
     def check_disk_id(self):
         id_sect = self.image.read_sector(0, (0, 0, 3))
@@ -20,9 +19,6 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         if id_sect['sect_data'][0] != ord('S'):
             return False
         return True
-
-    def set_image(self, image:FLOPPY_DISK_D88):
-        self.image = image
 
 
 
@@ -81,7 +77,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         while True:
             chain.append(curr_cluster)
             next_cluster = FAT[5 + curr_cluster]                # FAT starts from 6th byte
-            if next_cluster <= 0x97:   # 0x97 == 151
+            if next_cluster <= 0x97:   # 0x97 == 151 == self.max_cluster_num
                 curr_cluster = next_cluster
             elif next_cluster >= 0xc0 and next_cluster <= 0xc7:
                 used_sectors_in_last_cluster = (next_cluster & 0x0f) + 1
@@ -94,18 +90,23 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
             elif next_cluster == 0xff:
                 return ([], -1)                                 # This cluster is free (not used)
 
+    def delete_FAT_chain(self, chain:list[int]):
+        FAT = bytearray(self.read_FAT())
+        for ch in chain[0]:
+            if ch <= self.max_cluster_num:
+                FAT[ch + 5] = 0xff
+        self.write_FAT(FAT)
+
     def find_empty_cluster(self):
         """
         Return:
           An empty cluster number. -1 when no empty cluster is found.
         """
         FAT = self.read_FAT()
-        for cluster in range(152):
+        for cluster in range(self.max_cluster_num + 1):
             if FAT[cluster + 5] == 0xff:
                 return cluster
         return -1
-
-
 
     def get_all_directory_entries(self):
         """
@@ -126,7 +127,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
                 entry = struct.unpack_from('<8s3xBBBB', sect_data, idx * 32)
                 file_name, file_type, ascii_flag, random_access_flag, top_cluster = entry
                 file_name_j = asciij_to_utf8(file_name)
-                if top_cluster >=0 and top_cluster <= 151:
+                if top_cluster >=0 and top_cluster <= self.max_cluster_num:
                     FAT_chain, last_secs = self.trace_FAT_chain(top_cluster)
                     num_sectors = (len(FAT_chain)-1) * self.sect_per_cluster + last_secs
                 else:
@@ -151,7 +152,7 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
                 continue
             if dir_entry['file_name'][0] == 0xff:
                 continue                    # ever used ?
-            if dir_entry['file_type'] not in (0, 1, 2) or dir_entry['ascii_flag'] not in (0, 0xff) or dir_entry['random_access_flag'] not in (0, 0xff) or dir_entry['top_cluster'] > 151:
+            if dir_entry['file_type'] not in (0, 1, 2) or dir_entry['ascii_flag'] not in (0, 0xff) or dir_entry['random_access_flag'] not in (0, 0xff) or dir_entry['top_cluster'] > self.max_cluster_num:
                 continue
             valid_entries.append(dir_entry)
         return valid_entries
@@ -231,13 +232,6 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         existence = False if dir_entry['file_name'] == '' else True
         return existence
 
-    def delete_FAT_chain(self, chain:list[int]):
-        FAT = bytearray(self.read_FAT())
-        for ch in chain[0]:
-            if ch <= 151:
-                FAT[ch + 5] = 0xff
-        self.write_FAT(FAT)
-
     def read_directry_by_dir_idx(self, dir_idx):
         sect = dir_idx // (256//32)     # 8 directory entries per sector
         idx = dir_idx % (256//32)       # directory entry index in the sector        
@@ -284,6 +278,24 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
                 res.extend(sect_data)
         return res
 
+    def validate_file_attributes(self, file_type, ascii_flag, random_access_flag):
+        if file_type not in (0x00, 0x01, 0x02):
+            return False
+        if ascii_flag not in (0x00, 0xff):
+            return False
+        if random_access_flag not in (0x00, 0xff):
+            return False
+        return True
+
+    def validate_file_name(self, file_name):
+        print(file_name)
+        if file_name == None:
+            return False
+        if type(file_name) not in (str, bytes, bytearray):
+            return False
+        if file_name == '' or len(file_name)>8:
+            return False
+        return True
 
     def delete_file(self, file_name:str):
         file_name = self.normalize_file_name(file_name)
@@ -308,6 +320,10 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
         return res
 
     def write_file(self, file_name:str, write_data:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
+        if self.validate_file_name(file_name) == False:
+            raise ValueError
+        if self.validate_file_attributes(file_type, ascii_flag, random_access_flag) == False:
+            raise ValueError
         file_name = self.normalize_file_name(file_name)
         if self.is_exist(file_name):
             if overwrite:
@@ -437,4 +453,4 @@ class FM_FILE_SYSTEM(FILE_SYSTEM):
 
     def dump_FAT(self, ofst=5):
         FAT_data = self.read_FAT()
-        dump_data(FAT_data[ofst:ofst+152])
+        dump_data(FAT_data[ofst : ofst + self.max_cluster_num + 1])
