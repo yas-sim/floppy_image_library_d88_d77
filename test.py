@@ -19,6 +19,7 @@ def create_new_image():
 class TestDiskImage(unittest.TestCase):
     test_image_file = 'fb_toolbox.d77'
 
+
     def test_file_load(self):
         image_file = FLOPPY_IMAGE_D88()
         image_file.read_file(TestDiskImage.test_image_file)
@@ -29,6 +30,7 @@ class TestDiskImage(unittest.TestCase):
         fs.set_image(disk_image)
         fs.dump_valid_directory()
         fs.dump_FAT()
+
 
     def test_image_access(self):
         image_file = FLOPPY_IMAGE_D88()
@@ -52,6 +54,25 @@ class TestDiskImage(unittest.TestCase):
         print()
         print(basic_text)
 
+
+    def test_read_file_by_idx(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file('fb_toolbox.d77')
+
+        disk_image = image_file.images[0]
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(disk_image)
+        fs.dump_valid_directory()
+        fs.dump_FAT()
+
+        data = fs.read_file_by_idx(3)
+        basic_ir = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
+        basic_text = F_BASIC_IR_decode(basic_ir['data'])
+        print()
+        print(basic_text)
+
+
     def test_create_new_image(self):
         new_image = create_new_image()
         new_disk = new_image.images[0]
@@ -63,6 +84,7 @@ class TestDiskImage(unittest.TestCase):
         print(fs.image.read_sector_LBA(2))
         fs.dump_valid_directory()
         fs.dump_FAT()
+
 
     def test_create_new_file(self):
         new_image = create_new_image()
@@ -78,6 +100,7 @@ class TestDiskImage(unittest.TestCase):
         fs.write_file('TESTFILE', dummy, 0, 0, 0)
         fs.dump_valid_directory()
         fs.dump_FAT()
+
 
     def test_delete_file(self):
         new_image = create_new_image()
@@ -100,6 +123,7 @@ class TestDiskImage(unittest.TestCase):
         dirs = fs.get_valid_directory_entries()
         assert len(dirs) == 2
 
+
     def test_basic_image_access(self):
         new_image = create_new_image()
         new_disk = new_image.images[0]
@@ -113,6 +137,7 @@ class TestDiskImage(unittest.TestCase):
         print(data)
         data = new_disk.read_sector(0, (0, 0, 1))
         print(data)
+
 
     def test_write_image(self):
         image_file = FLOPPY_IMAGE_D88()
@@ -129,6 +154,7 @@ class TestDiskImage(unittest.TestCase):
         fs.dump_valid_directory()
         image_file.write_file('test.d77')
         fs.dump_FAT()
+
 
     def test_serialize_deserialize(self):
         file_name = 'test.yaml'
@@ -150,23 +176,29 @@ class TestDiskImage(unittest.TestCase):
             fs.set_image(new_disk)
             fs.dump_valid_directory()
 
-match 1:
+
+# ===================================================================
+
+test_set = [
+    'test_file_load',
+    'test_image_access',
+    'test_basic_ir_decoding',
+    'test_create_new_image',
+    'test_create_new_file',
+    'test_delete_file',
+    'test_basic_image_access',
+    'test_write_image',
+    'test_serialize_deserialize',
+    'test_read_file_by_idx'
+]
+match 2:
     case 0:
         unittest.main()
     case 1:
-        unittest.main(TestDiskImage, defaultTest='test_serialize_deserialize')
-    case 2:
-        test_set = [
-            'test_file_load',
-            'test_image_access',
-            'test_basic_ir_decoding',
-            'test_create_new_image',
-            'test_create_new_file',
-            'test_delete_file',
-            'test_basic_image_access',
-            'test_write_image',
-            'test_serialize_deserialize'
-        ]
         unittest.main(TestDiskImage, defaultTest=test_set)
+    case 2:
+        test_num = 9
+        print(test_set[test_num])
+        unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
         unittest.main()

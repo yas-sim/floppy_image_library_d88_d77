@@ -121,7 +121,7 @@ When a file is deleted, the top of the file name is set to 0x00, and the used cl
 - ☑ File attribute check on write_file
 - ☑ Disk full detection on wite_file
 - ☐ Sector read error handling
-- ☐ File access by dir_idx
+- ☑ File access by dir_idx
 - ☐ File access CLI commands
 - ☐ Motorola-S decoding encoding
 - ☑ Image serialization

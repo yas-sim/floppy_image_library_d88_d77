@@ -318,6 +318,18 @@ class FM_FILE_SYSTEM:
         res = { 'data':file_data, **dir_entry }
         return res
 
+    def read_file_by_idx(self, dir_idx:int):
+        """
+        Read file using directory index number to specify the file.
+        """
+        dir_entries = self.get_valid_directory_entries()
+        for dir_entry in dir_entries:
+            if dir_entry['dir_idx'] == dir_idx:
+                res = self.read_file(dir_entry['file_name'])
+                return res
+        res = { 'data': '', 'file_name': '' }
+        return res
+
     def write_file(self, file_name:str, write_data:bytearray, file_type:int, ascii_flag:int, random_access_flag:int, overwrite=False):
         if self.validate_file_name(file_name) == False:
             raise ValueError
