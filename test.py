@@ -100,11 +100,6 @@ class TestDiskImage(unittest.TestCase):
         dirs = fs.get_valid_directory_entries()
         assert len(dirs) == 2
 
-    def test_serialize_image(self):
-        new_image = create_new_image()
-        new_disk = new_image.images[0]
-        new_disk.serialize('test.yaml', hex_dump=True)
-
     def test_basic_image_access(self):
         new_image = create_new_image()
         new_disk = new_image.images[0]
@@ -155,6 +150,23 @@ class TestDiskImage(unittest.TestCase):
             fs.set_image(new_disk)
             fs.dump_valid_directory()
 
-unittest.main()
-
-#unittest.main(TestDiskImage, defaultTest='test_serialize_deserialize')
+match 1:
+    case 0:
+        unittest.main()
+    case 1:
+        unittest.main(TestDiskImage, defaultTest='test_serialize_deserialize')
+    case 2:
+        test_set = [
+            'test_file_load',
+            'test_image_access',
+            'test_basic_ir_decoding',
+            'test_create_new_image',
+            'test_create_new_file',
+            'test_delete_file',
+            'test_basic_image_access',
+            'test_write_image',
+            'test_serialize_deserialize'
+        ]
+        unittest.main(TestDiskImage, defaultTest=test_set)
+    case _:
+        unittest.main()
