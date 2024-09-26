@@ -6,6 +6,16 @@ from fbasic_utils import *
 
 from misc import *
 
+def create_new_image():
+    new_image = FLOPPY_IMAGE_D88()
+    new_image.create_and_add_new_empty_image()
+    new_disk = new_image.images[0]
+    fs = FM_FILE_SYSTEM()
+    fs.set_image(new_disk)
+    fs.logical_format()
+    return new_image
+
+
 class TestDiskImage(unittest.TestCase):
     test_image_file = 'fb_toolbox.d77'
 
@@ -43,8 +53,7 @@ class TestDiskImage(unittest.TestCase):
         print(basic_text)
 
     def test_create_new_image(self):
-        new_image = FLOPPY_IMAGE_D88()
-        new_image.create_add_new_empty_image()
+        new_image = create_new_image()
         new_disk = new_image.images[0]
 
         fs = FM_FILE_SYSTEM()
@@ -56,10 +65,8 @@ class TestDiskImage(unittest.TestCase):
         fs.dump_FAT()
 
     def test_create_new_file(self):
-        new_image = FLOPPY_IMAGE_D88()
-        new_image.create_add_new_empty_image()
+        new_image = create_new_image()
         new_disk = new_image.images[0]
-        print(new_disk.read_sector_LBA(16))
 
         fs = FM_FILE_SYSTEM()
         fs.set_image(new_disk)
@@ -73,10 +80,8 @@ class TestDiskImage(unittest.TestCase):
         fs.dump_FAT()
 
     def test_delete_file(self):
-        new_image = FLOPPY_IMAGE_D88()
-        new_image.create_add_new_empty_image()
+        new_image = create_new_image()
         new_disk = new_image.images[0]
-        print(new_disk.read_sector_LBA(16))
 
         fs = FM_FILE_SYSTEM()
         fs.set_image(new_disk)
@@ -97,8 +102,7 @@ class TestDiskImage(unittest.TestCase):
 
 
     def test_serialize_image(self):
-        new_image = FLOPPY_IMAGE_D88()
-        new_image.create_add_new_empty_image()
+        new_image = create_new_image()
         new_disk = new_image.images[0]
         serialized_data = new_disk.serialize('yaml', hex_dump=True)
         #print(serialized_data)

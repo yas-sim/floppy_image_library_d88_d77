@@ -90,7 +90,7 @@ class FLOPPY_IMAGE_D88:
             self.images.append(disk_image)
             image_pos += disk_size 
  
-    def create_add_new_empty_image(self):
+    def create_and_add_new_empty_image(self):
         new_image = FLOPPY_DISK_D88()
         new_image.create_new_disk()
         self.images.append(new_image)
