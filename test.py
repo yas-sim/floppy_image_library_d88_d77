@@ -1,5 +1,8 @@
 import unittest
 
+import time
+import timeit
+
 from floppy_image import *
 from file_system import *
 from fbasic_utils import *
@@ -158,24 +161,23 @@ class TestDiskImage(unittest.TestCase):
 
     def test_serialize_deserialize(self):
         file_name = 'test.yaml'
-        hex_dump = False
+        hex_dump = True
         if True:
             new_image = FLOPPY_IMAGE_D88()
             new_image.read_file(TestDiskImage.test_image_file)
             new_disk = new_image.images[0]
-            new_disk.serialize(file_name, hex_dump=hex_dump)
+            t = timeit.timeit(lambda: new_disk.serialize(file_name, hex_dump=hex_dump), number=1)
+            print(t)
             del new_image
 
         if True:
-            new_image = FLOPPY_IMAGE_D88()
-            new_image.create_and_add_new_empty_image()
-            new_disk = new_image.images[0]
-            new_disk.deserialize(file_name, hex_dump=hex_dump)
+            new_disk = FLOPPY_DISK_D88()
+            t = timeit.timeit(lambda: new_disk.deserialize(file_name, hex_dump=hex_dump), number=1)
+            print(t)
 
             fs = FM_FILE_SYSTEM()
             fs.set_image(new_disk)
             fs.dump_valid_directory()
-
 
 # ===================================================================
 
@@ -197,7 +199,7 @@ match 2:
     case 1:
         unittest.main(TestDiskImage, defaultTest=test_set)
     case 2:
-        test_num = 9
+        test_num = 8
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:

@@ -308,10 +308,11 @@ class FLOPPY_DISK_D88:
         res = []
         data = data.replace(' ', '')
         assert len(data) % 2 == 0
-        for pos in range(0, len(data), 2):
-            hex_str = data[pos:pos+1+1]
-            val = int(hex_str, 16)
-            res.append(val)
+        #for pos in range(0, len(data), 2):
+        #    hex_str = data[pos:pos+1+1]
+        #    val = int(hex_str, 16)
+        #    res.append(val)
+        res = bytes().fromhex(data)
         return bytearray(res)
 
 
