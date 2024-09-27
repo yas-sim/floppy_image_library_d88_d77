@@ -108,6 +108,15 @@ class FM_FILE_SYSTEM:
                 return cluster
         return -1
 
+    def get_number_of_free_clusters(self):
+        FAT = self.read_FAT()
+        count = 0
+        ofst = 5
+        for pos in range(self.max_cluster_num+1):
+            if FAT[pos + ofst] == 0xff:
+                count += 1
+        return count
+
     def get_all_directory_entries(self):
         """
         Return:

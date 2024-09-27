@@ -34,6 +34,18 @@ class TestDiskImage(unittest.TestCase):
         fs.dump_valid_directory()
         fs.dump_FAT()
 
+    def test_get_directory_entries(self):
+        image_file = FLOPPY_IMAGE_D88()
+        image_file.read_file(TestDiskImage.test_image_file)
+
+        disk_image = image_file.images[0]
+
+        fs = FM_FILE_SYSTEM()
+        fs.set_image(disk_image)
+        entries = fs.get_valid_directory_entries()
+        for entry in entries:
+            print(entry)
+
 
     def test_image_access(self):
         image_file = FLOPPY_IMAGE_D88()
@@ -194,7 +206,8 @@ test_set = [
     'test_basic_image_access',
     'test_write_image',
     'test_serialize_deserialize',
-    'test_read_file_by_idx'
+    'test_read_file_by_idx',
+    'test_get_directory_entries'
 ]
 match 0:
     case 0:
@@ -202,7 +215,7 @@ match 0:
     case 1:
         unittest.main(TestDiskImage, defaultTest=test_set)
     case 2:
-        test_num = 8
+        test_num = 10
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
