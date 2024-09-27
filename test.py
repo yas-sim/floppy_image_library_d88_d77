@@ -6,15 +6,13 @@ import timeit
 
 import subprocess
 
-from fdimagelib.floppy_image import FLOPPY_IMAGE_D88, FLOPPY_DISK_D88
-from fdimagelib.file_system import FM_FILE_SYSTEM
-from fdimagelib.fbasic_utils import F_BASIC_IR_decode
+import fdimagelib
 
 def create_new_image():
-    new_image = FLOPPY_IMAGE_D88()
+    new_image = fdimagelib.FLOPPY_IMAGE_D88()
     new_image.create_and_add_new_empty_image()
     new_disk = new_image.images[0]
-    fs = FM_FILE_SYSTEM()
+    fs = fdimagelib.FM_FILE_SYSTEM()
     fs.set_image(new_disk)
     fs.logical_format()
     return new_image
@@ -25,23 +23,23 @@ class TestDiskImage(unittest.TestCase):
 
 
     def test_file_load(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file(TestDiskImage.test_image_file)
 
         disk_image = image_file.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(disk_image)
         fs.dump_valid_directory()
         fs.dump_FAT()
 
     def test_get_directory_entries(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file(TestDiskImage.test_image_file)
 
         disk_image = image_file.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(disk_image)
         entries = fs.get_valid_directory_entries()
         for entry in entries:
@@ -49,42 +47,42 @@ class TestDiskImage(unittest.TestCase):
 
 
     def test_image_access(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file(TestDiskImage.test_image_file)
 
 
     def test_basic_ir_decoding(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file('fb_toolbox.d77')
 
         disk_image = image_file.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(disk_image)
         fs.dump_valid_directory()
         fs.dump_FAT()
 
         data = fs.read_file('ASM09')
         basic_ir = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
-        basic_text = F_BASIC_IR_decode(basic_ir['data'])
+        basic_text = fdimagelib.F_BASIC_IR_decode(basic_ir['data'])
         print()
         print(basic_text)
 
 
     def test_read_file_by_idx(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file('fb_toolbox.d77')
 
         disk_image = image_file.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(disk_image)
         fs.dump_valid_directory()
         fs.dump_FAT()
 
         data = fs.read_file_by_idx(3)
         basic_ir = fs.extract_file_contents(data['data'], data['file_type'], data['ascii_flag'])
-        basic_text = F_BASIC_IR_decode(basic_ir['data'])
+        basic_text = fdimagelib.F_BASIC_IR_decode(basic_ir['data'])
         print()
         print(basic_text)
 
@@ -93,7 +91,7 @@ class TestDiskImage(unittest.TestCase):
         new_image = create_new_image()
         new_disk = new_image.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(new_disk)
         fs.logical_format()
         print(fs.check_disk_id())
@@ -106,7 +104,7 @@ class TestDiskImage(unittest.TestCase):
         new_image = create_new_image()
         new_disk = new_image.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(new_disk)
         fs.logical_format()
         print(fs.check_disk_id())
@@ -122,7 +120,7 @@ class TestDiskImage(unittest.TestCase):
         new_image = create_new_image()
         new_disk = new_image.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(new_disk)
         fs.logical_format()
         print(fs.check_disk_id())
@@ -156,12 +154,12 @@ class TestDiskImage(unittest.TestCase):
 
 
     def test_write_image(self):
-        image_file = FLOPPY_IMAGE_D88()
+        image_file = fdimagelib.FLOPPY_IMAGE_D88()
         image_file.read_file('fb_toolbox.d77')
 
         disk_image = image_file.images[0]
 
-        fs = FM_FILE_SYSTEM()
+        fs = fdimagelib.FM_FILE_SYSTEM()
         fs.set_image(disk_image)
         data = fs.read_file('ASM09EB')
         print("data", len(data['data']))
@@ -179,7 +177,7 @@ class TestDiskImage(unittest.TestCase):
             for hex_dump in hex_dumps:
                 print(f'file name:{file_name}, hex dump:{hex_dump}')
                 if True:
-                    new_image = FLOPPY_IMAGE_D88()
+                    new_image = fdimagelib.FLOPPY_IMAGE_D88()
                     new_image.read_file(TestDiskImage.test_image_file)
                     new_disk = new_image.images[0]
                     t = timeit.timeit(lambda: new_disk.serialize(file_name, hex_dump=hex_dump), number=1)
@@ -187,11 +185,11 @@ class TestDiskImage(unittest.TestCase):
                     del new_image
 
                 if True:
-                    new_disk = FLOPPY_DISK_D88()
+                    new_disk = fdimagelib.FLOPPY_DISK_D88()
                     t = timeit.timeit(lambda: new_disk.deserialize(file_name, hex_dump=hex_dump), number=1)
                     print(t)
 
-                    fs = FM_FILE_SYSTEM()
+                    fs = fdimagelib.FM_FILE_SYSTEM()
                     fs.set_image(new_disk)
                     fs.dump_valid_directory()
 
