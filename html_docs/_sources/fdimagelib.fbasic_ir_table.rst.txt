@@ -1,0 +1,7 @@
+fdimagelib.fbasic\_ir\_table module
+===================================
+
+.. automodule:: fdimagelib.fbasic_ir_table
+   :members:
+   :undoc-members:
+   :show-inheritance:

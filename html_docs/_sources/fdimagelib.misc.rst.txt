@@ -1,0 +1,7 @@
+fdimagelib.misc module
+======================
+
+.. automodule:: fdimagelib.misc
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,18 +1,14 @@
 import os
 import argparse
 
-from floppy_image import *
-from file_system import *
-from fbasic_utils import *
-
-from misc import *
+import fdimagelib
 
 def main(args):
     if args.file == '':
         return
     if os.path.exists(args.file) == False:
         raise FileNotFoundError
-    image_file = FLOPPY_IMAGE_D88()
+    image_file = fdimagelib.FLOPPY_IMAGE_D88()
     image_file.read_file(args.file)
 
     num_images = len(image_file.images)
@@ -23,7 +19,7 @@ def main(args):
         raise ValueError
     disk_image = image_file.images[image_number]
 
-    fs = FM_FILE_SYSTEM()
+    fs = fdimagelib.FM_FILE_SYSTEM()
     fs.set_image(disk_image)
     entries = fs.get_valid_directory_entries()
     for entry in entries:

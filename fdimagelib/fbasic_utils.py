@@ -1,8 +1,8 @@
 import struct
 from enum import Enum
 
-from fbasic_ir_table import ir_table, ir_table_ff
-from ascii_j import *
+from fdimagelib.fbasic_ir_table import ir_table, ir_table_ff
+from fdimagelib.ascii_j import *
 
 def decode_float(data:bytearray):
     exponent = data[0]

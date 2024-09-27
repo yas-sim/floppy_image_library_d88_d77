@@ -1,0 +1,7 @@
+fdimagelib.floppy\_image module
+===============================
+
+.. automodule:: fdimagelib.floppy_image
+   :members:
+   :undoc-members:
+   :show-inheritance:

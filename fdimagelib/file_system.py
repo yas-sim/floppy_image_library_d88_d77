@@ -1,7 +1,6 @@
-from floppy_image import *
-from ascii_j import *
-from misc import *
-
+from fdimagelib.floppy_image import *
+from fdimagelib.ascii_j import *
+from fdimagelib.misc import *
 
 class FM_FILE_SYSTEM:
     def __init__(self):

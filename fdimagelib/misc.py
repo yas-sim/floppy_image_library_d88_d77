@@ -1,4 +1,4 @@
-from ascii_j import *
+from fdimagelib.ascii_j import *
 
 def dump_data(data:any):
     if type(data) != bytearray:

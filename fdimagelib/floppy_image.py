@@ -121,9 +121,9 @@ class FLOPPY_DISK_D88:
         """
         Read a sector. Use track number and sector ID (C, H, R) to specify the sector.  
         Input parameters:  
-          track = Track number (0-163)  
-          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
-          ignoreCH = Ignores C and H parameters and cares only R  
+            track = Track number (0-163)  
+            sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
+            ignoreCH = Ignores C and H parameters and cares only R  
         """
         if track < 0 or track >= len(self.tracks):
             raise ValueError
@@ -153,8 +153,8 @@ class FLOPPY_DISK_D88:
     def read_sector_idx(self, track, sect_idx):
         """
         Input parameters:
-          track = Track number (0-163)
-          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
+            track = Track number (0-163)
+            sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
         """
         if track < 0 or track >= len(self.tracks):
             raise ValueError
@@ -181,11 +181,11 @@ class FLOPPY_DISK_D88:
         """
         Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.  
         Input parameters:  
-          track = Track number (0-163)  
-          sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
-          sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.  
-          ignoreCH = Ignores C and H parameters and cares only R  
-          create_new = Create a new sector when the specified sector does not exist  
+            track = Track number (0-163)  
+            sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
+            sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.  
+            ignoreCH = Ignores C and H parameters and cares only R  
+            create_new = Create a new sector when the specified sector does not exist  
         """
         write_data = bytearray(write_data)
         sect = self.read_sector(track, sect_id, ignoreCH)

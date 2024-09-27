@@ -1,0 +1,23 @@
+fdimagelib package
+==================
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   fdimagelib.ascii_j
+   fdimagelib.fbasic_ir_table
+   fdimagelib.fbasic_utils
+   fdimagelib.file_system
+   fdimagelib.floppy_image
+   fdimagelib.misc
+
+Module contents
+---------------
+
+.. automodule:: fdimagelib
+   :members:
+   :undoc-members:
+   :show-inheritance:

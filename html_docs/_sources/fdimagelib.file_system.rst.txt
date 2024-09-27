@@ -1,0 +1,7 @@
+fdimagelib.file\_system module
+==============================
+
+.. automodule:: fdimagelib.file_system
+   :members:
+   :undoc-members:
+   :show-inheritance:

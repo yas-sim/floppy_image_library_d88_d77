@@ -1,0 +1,7 @@
+fdimagelib.fbasic\_utils module
+===============================
+
+.. automodule:: fdimagelib.fbasic_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:

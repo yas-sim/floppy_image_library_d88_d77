@@ -1,0 +1,7 @@
+fdimagelib.ascii\_j module
+==========================
+
+.. automodule:: fdimagelib.ascii_j
+   :members:
+   :undoc-members:
+   :show-inheritance:

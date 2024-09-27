@@ -1,13 +1,14 @@
+import os, sys
 import unittest
 
 import time
 import timeit
 
-from floppy_image import *
-from file_system import *
-from fbasic_utils import *
+import subprocess
 
-from misc import *
+from fdimagelib.floppy_image import FLOPPY_IMAGE_D88, FLOPPY_DISK_D88
+from fdimagelib.file_system import FM_FILE_SYSTEM
+from fdimagelib.fbasic_utils import F_BASIC_IR_decode
 
 def create_new_image():
     new_image = FLOPPY_IMAGE_D88()
@@ -194,7 +195,11 @@ class TestDiskImage(unittest.TestCase):
                     fs.set_image(new_disk)
                     fs.dump_valid_directory()
 
+    def test_cmd_fmdir(self):
+        subprocess.run(f'python fmdir.py -f {TestDiskImage.test_image_file} -n 0 -v', shell=True)
+
 # ===================================================================
+
 
 test_set = [
     'test_file_load',
@@ -207,7 +212,8 @@ test_set = [
     'test_write_image',
     'test_serialize_deserialize',
     'test_read_file_by_idx',
-    'test_get_directory_entries'
+    'test_get_directory_entries',
+    'test_cmd_fmdir'
 ]
 match 0:
     case 0:
@@ -219,4 +225,5 @@ match 0:
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
-        unittest.main()
+        pass
+
