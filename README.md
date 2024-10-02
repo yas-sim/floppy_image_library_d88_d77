@@ -3,6 +3,60 @@
 This libray is intended to be used for manipulating the floppy disk images for emulators.  
 Initial target is to support D88/D77 floppy disk image format.  
 
+----------------------------
+
+## CLI commands:
+
+### `fmdir.py`
+**Description**: Show directory entries of an D88/D77 image file.  
+
+```sh
+options:
+  -h, --help            show this help message and exit
+  -f FILE, --file FILE  D88/D77 image file name
+  -n IMAGE_NUMBER, --image_number IMAGE_NUMBER
+                        Specify target image number (if the image file contains multiple images). Default=0
+  --original            Display the original file name
+  -v, --verbose         Verbose flag
+```
+
+Command line examples:
+```sh
+python fmdir.py -f image.d88 -n 0
+```
+
+
+### `fmread.py`
+
+**Description**: Read a file from a D88/D77 image file.  
+
+```sh
+options:
+  -h, --help            show this help message and exit
+  -f FILE, --file FILE  D88/D77 image file name
+  -n IMAGE_NUMBER, --image_number IMAGE_NUMBER
+                        Specify target image number (if the image file contains multiple images). Default=0
+  -t TARGET_FILE, --target_file TARGET_FILE
+                        Target file name in the image file to read.
+  -i INDEX, --index INDEX
+                        Directory index number to specify the target file to read.
+  -o OUTPUT, --output OUTPUT
+                        Output file name. When omitted, the input file name and file attributes are used to generate the output file name.
+  -v, --verbose         Verbose flag
+  ```
+Command line examples: 
+
+Read a file from the image #0 in '`image.d88`' and write it to '`GAME.dat`'. The actual file name contsins the input file attributes. The final output file name would be something like '`game-2B0.dat`'.
+```sh
+python fmread.py -f image.d88 -n 0 -t GAME -o GAME.dat
+```
+Read a file from the image #0 in '`image.d77`'. The output file name will be generated based on the read file name and its attributes. The final output file name would be something like '`GAME.2B0`'.
+```sh
+python fmread.py -f image.d88 -n 0 -i 1
+```
+
+----------------------------
+
 ### 'FD_IMAGE' and its derivative classes
 This class represents a floppy disk image file that may contain multiple floppy disk information.
 |Name|Description|Note|
