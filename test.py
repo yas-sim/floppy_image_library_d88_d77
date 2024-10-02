@@ -196,6 +196,14 @@ class TestDiskImage(unittest.TestCase):
     def test_cmd_fmdir(self):
         subprocess.run(f'python fmdir.py -f {TestDiskImage.test_image_file} -n 0 -v', shell=True)
 
+    def test_cmd_fmread(self):
+        for index in range(30):
+            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i {index} -v', shell=True)
+        subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i 0 -v -o test.out', shell=True)
+        file_names = ('ASM09', 'ASM09EB', 'DEBUG', 'DISASM')
+        for file_name in file_names:
+            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -t {file_name} -v', shell=True)
+
 # ===================================================================
 
 
@@ -211,7 +219,8 @@ test_set = [
     'test_serialize_deserialize',
     'test_read_file_by_idx',
     'test_get_directory_entries',
-    'test_cmd_fmdir'
+    'test_cmd_fmdir',
+    'test_cmd_fmread'
 ]
 match 0:
     case 0:
@@ -219,7 +228,7 @@ match 0:
     case 1:
         unittest.main(TestDiskImage, defaultTest=test_set)
     case 2:
-        test_num = 10
+        test_num = 12
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:

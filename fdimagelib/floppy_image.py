@@ -102,6 +102,8 @@ class FLOPPY_IMAGE_D88:
             new_disk_image = image.reconstruct_image_data()
             self.image_data += new_disk_image
 
+    def get_num_images(self) -> int:
+        return len(self.images)
 
 
 class FLOPPY_DISK_D88:
