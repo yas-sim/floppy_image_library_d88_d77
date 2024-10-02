@@ -38,7 +38,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('fmdir', 'Read a file from a D88/D77 image file')
+    parser = argparse.ArgumentParser('fmread', 'Read a file from a D88/D77 image file')
     parser.add_argument('-f', '--file', required=True, help='D88/D77 image file name')
     parser.add_argument('-n', '--image_number', required=False, default=0, help='Specify target image number (if the image file contains multiple images). Default=0')
     parser.add_argument('-t', '--target_file', required=False, help='Target file name in the image file to read.')

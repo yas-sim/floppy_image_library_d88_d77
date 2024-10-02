@@ -1,4 +1,5 @@
 import os, sys
+import shutil
 import unittest
 
 import time
@@ -205,6 +206,15 @@ class TestDiskImage(unittest.TestCase):
         for file_name, output in zip(file_names, output_names):
             subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -t {file_name} -o {output} -v', shell=True, check=True)
 
+    def test_cmd_fmmakefile(self):
+        test_create_file = 'create_test.d88'
+        if os.path.exists(test_create_file):
+            os.remove(test_create_file)
+        assert not os.path.exists(test_create_file)
+        subprocess.run(f'python fmmakedisk.py -f {test_create_file}', shell=True, check=True)
+        assert os.path.exists(test_create_file)
+
+
 # ===================================================================
 
 
@@ -221,15 +231,16 @@ test_set = [
     'test_read_file_by_idx',
     'test_get_directory_entries',
     'test_cmd_fmdir',
-    'test_cmd_fmread'
+    'test_cmd_fmread',
+    'test_cmd_fmmakefile',
 ]
-match 0:
+match 2:
     case 0:
         unittest.main()
     case 1:
         unittest.main(TestDiskImage, defaultTest=test_set)
     case 2:
-        test_num = 12
+        test_num = 13
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
