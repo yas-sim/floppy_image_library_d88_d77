@@ -99,6 +99,9 @@ class String_Buffer:
 
 
 def F_BASIC_IR_decode(ir_data):
+    if ir_data[0] != 0xff:              # non-protected IR data must start with 0xff
+        return ''
+    ir_data = ir_data[3:]               # Skip type type and unlist data field
     ir_codes = list(ir_table.keys())
     ir_min = min(ir_codes)
     ir_max = max(ir_codes)

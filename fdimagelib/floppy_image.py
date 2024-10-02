@@ -87,7 +87,7 @@ class FLOPPY_IMAGE_D88:
  
     def create_and_add_new_empty_image(self):
         new_image = FLOPPY_DISK_D88()
-        new_image.disk_name = 'NEW IMAGE       '
+        new_image.disk_name = b'NEW IMAGE       \0'
         new_image.disk_type = 0x00          # 2D
         new_image.write_protect = 0x00      # No protect
         new_image.create_new_disk()

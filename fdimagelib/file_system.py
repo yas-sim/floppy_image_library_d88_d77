@@ -390,50 +390,42 @@ class FM_FILE_SYSTEM:
         ascii_flag: 0x00:Binary, 0xff:ASCII  
         """
         data = bytearray()
+        eof = 0x1a
         match ascii_flag:
             case 0x00:              # Binary
                 match file_type:
                     case 0x00:
-                        match file_data[0]:
-                            case 0xff:      # BASIC binary source (not protected)
-                                unlist = struct.unpack_from('<H', file_data, 1)     # UNLIST line number
-                                eof = bytearray([0x00, 0x00, 0x00, 0x1a])
-                                for pos in range(3, len(file_data)-4):              # 3:Skip ID and unlist line number on the top.
-                                    if file_data[pos:pos+4] == eof:
-                                        data = file_data[3:pos]
-                                        res = { 'file_type':0, 'data':data, 'unlist':unlist }
-                                        return res
-                            case 0xfe:      # BASIC binary source (protected)
-                                unlist = struct.unpack_from('>H', file_data, 1)[0]     # UNLIST line number
-                                eof = 0x1a
-                                for pos in range(3, len(file_data)):
-                                    if file_data[pos] == eof:
-                                        data = file_data[3:pos]
-                                        res = { 'file_type':1, 'data':data, 'unlist':unlist }
-                            case _:
-                                return { 'file_type':-1 }
+                        file_type = 0 if file_data[0] == 0xff else 1 if file_data[0] == 0xfe else -1    # 0xff:non-protected, 0xfe:protected
+                        unlist = struct.unpack_from('>H', file_data, 1)     # UNLIST line number
+                        if eof in file_data[3:]:
+                            pos = file_data[3:].index(eof) + 3              # Skip file type and unlist data field, and search EOF
+                            data = file_data[:pos + 1]
+                            res = { 'file_type':file_type, 'data':data, 'unlist':unlist }
+                            return res
+                        else:
+                            return { 'file_type':-1, 'data':bytearray() }
                     case 0x01:
-                        return { 'file_type':-1 }
+                        return { 'file_type':-1, 'data':bytearray() }
                     case 0x02:
                         if file_data[0] == 0x00:
                             mc_len, mc_load_addr = struct.unpack_from('>HH', file_data, 1)          # Machine code length, load address
-                            eof = bytearray([0xff, 0x00, 0x00])
-                            data = file_data[5:5+mc_len]
-                            if file_data[5+mc_len:5+mc_len+3] == eof:
-                                mc_entry_addr = struct.unpack_from('>H', file_data, 5+mc_len+3)[0]  # Entry address
-                                if file_data[5+mc_len+3+2] == 0x1a:
-                                    res = { 'file_type':2, 'data':data, 'length':mc_len, 'load_address':mc_load_addr, 'entry_address':mc_entry_addr}
-                                    return res
-                        return { 'file_type':-1 }
+                            data = file_data[: 1 + 2 + 2 + mc_len + 1 + 2 + 2 + 1 + 1]
+                            if file_data[-1] == eof:
+                                mc_entry_addr = struct.unpack_from('>H', file_data, 1+2+2+mc_len+1+3)[0]  # Entry address
+                                res = { 'file_type':2, 'data':data, 'length':mc_len, 'load_address':mc_load_addr, 'entry_address':mc_entry_addr}
+                                return res
+                        return { 'file_type':-1, 'data':bytearray() }
                     case _:
-                        return { 'file_type':-1 }
+                        return { 'file_type':-1, 'data':bytearray() }
             case 0xff:          # ASCII
                 eof = 0x1a
-                for pos in range(len(file_data)):
-                    if file_data[pos] == eof:
-                        data = file_data[:pos]
-                        res = { 'file_type':3, 'data':data }
-                        return res
+                if eof in file_data:
+                    pos = file_data.index(eof)
+                    data = file_data[:pos+1]
+                    res = { 'file_type':3, 'data':data }
+                    return res
+                else:
+                    return { 'file_type':-1, 'data':bytearray()}
             case _:
                 return { 'file_type':-1 }
 

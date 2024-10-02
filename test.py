@@ -234,7 +234,7 @@ test_set = [
     'test_cmd_fmread',
     'test_cmd_fmmakefile',
 ]
-match 2:
+match 0:
     case 0:
         unittest.main()
     case 1:

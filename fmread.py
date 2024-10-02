@@ -10,12 +10,12 @@ def main(args):
 
     if args.source != '' and args.source is not None:
         if not fs.is_exist(args.source):
-            raise FileNotFoundError(f'Target file is not existing ({args.source})')
+            raise FileNotFoundError(f'Target file does not exist. ({args.source})')
         data = fs.read_file(args.source)
     elif args.index != '' and args.index is not None:
         data = fs.read_file_by_idx(int(args.index))
         if len(data['file_name']) == 0:
-            raise FileNotFoundError(f'Target file is not existing. (index=={args.index})')
+            raise FileNotFoundError(f'Target file does not exist. (index=={args.index})')
     else:
         raise ValueError('Either one of --source or --index must be specified.')
     if args.verbose:
