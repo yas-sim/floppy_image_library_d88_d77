@@ -200,11 +200,11 @@ class TestDiskImage(unittest.TestCase):
     def test_cmd_fmread(self):
         for index in range(3):
             subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i {index} -v', shell=True, check=True)
-        subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i 0 -v -o test.out', shell=True, check=True)
+        subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i 0 -v -d test.out', shell=True, check=True)
         file_names = ('ASM09', 'ASM09EB', 'DEBUG', 'DISASM')
         output_names = ('asm09.bin', 'asm09eb.bin', 'debug.bin', 'disasm.bin')
         for file_name, output in zip(file_names, output_names):
-            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -t {file_name} -o {output} -v', shell=True, check=True)
+            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -s {file_name} -d {output} -v', shell=True, check=True)
 
     def test_cmd_fmmakefile(self):
         test_create_file = 'create_test.d88'
@@ -240,7 +240,7 @@ match 2:
     case 1:
         unittest.main(TestDiskImage, defaultTest=test_set)
     case 2:
-        test_num = 13
+        test_num = 12
         print(test_set[test_num])
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
