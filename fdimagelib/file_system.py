@@ -367,7 +367,7 @@ class FM_FILE_SYSTEM:
                 FAT[prev_cluster + 5] = current_cluster
             LBA = self.cluster_to_LBA(current_cluster)
             for sect_count in range(self.sect_per_cluster):
-                self.image.write_sector_LBA(LBA, write_data[:256])
+                self.image.write_sector_LBA(LBA + sect_count, write_data[:256])
                 write_data = write_data[256:]
                 FAT[current_cluster + 5] = 0xc0 + sect_count
                 if len(write_data) == 0:
