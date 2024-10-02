@@ -46,14 +46,44 @@ options:
   ```
 Command line examples: 
 
-Read a file from the image #0 in '`image.d88`' and write it to '`GAME.dat`'. The actual file name contsins the input file attributes. The final output file name would be something like '`game-2B0.dat`'.
+Read a file from the image #0 in '`image.d88`' and write it to '`GAME.dat`'. The file extension represents the source file attributes. The final output file name would be something like '`game.dat.0BS`'.
 ```sh
-python fmread.py -f image.d88 -n 0 -t GAME -o GAME.dat
+python fmread.py -f image.d88 -n 0 -s GAME -d GAME.dat
 ```
-Read a file from the image #0 in '`image.d77`'. The output file name will be generated based on the read file name and its attributes. The final output file name would be something like '`GAME.2B0`'.
+Read a file from the image #0 in '`image.d77`'. The output file name will be generated based on the read file name and its attributes. The final output file name would be something like '`GAME.0BS`'.
 ```sh
 python fmread.py -f image.d88 -n 0 -i 1
 ```
+
+### `fmwrite.py`  
+**Description**: Write a file to a D88/D77 image file.  
+
+```sh
+options:
+  -h, --help            show this help message and exit
+  -f FILE, --file FILE  D88/D77 image file name
+  -n IMAGE_NUMBER, --image_number IMAGE_NUMBER
+                        Specify target image number (if the image file contains multiple images). Default=0
+  -s SOURCE, --source SOURCE
+                        Source file name to be written to the image file.
+  -v, --verbose         Verbose flag
+```
+
+Command line examples:
+Write '`GAME.0AS` file to the `test.d88` image file.
+```sh
+python fmwrite.py -f test.d88 -s GAME.0AS
+```
+
+### `fmmakedisk.py`  
+
+Create a new image file. The new image file contains only one disk image. The disk image will be formatted in F-BASIC DISK BASIC format.  
+```sh
+options:
+  -h, --help            show this help message and exit
+  -f FILE, --file FILE  D88/D77 image file name
+  -v, --verbose         Verbose flag
+  ```
 
 ----------------------------
 
