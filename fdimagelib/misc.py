@@ -20,7 +20,7 @@ def dump_data(data:any):
         print('   ' * (16-(count % 16)))
         print(f'  {ascii_buf}')
 
-def open_image(file_name:str, image_number:str, verbose:bool=False) -> FLOPPY_DISK_D88:
+def open_image(file_name:str, image_number:str, verbose:bool=False) -> typing.Tuple[FLOPPY_IMAGE_D88, FLOPPY_DISK_D88]:
     if file_name == '':
         return
     if os.path.exists(file_name) == False:

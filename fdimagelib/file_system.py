@@ -267,6 +267,8 @@ class FM_FILE_SYSTEM:
 
     def pad_data_to_fit_sector(self, data:bytearray):
         num_pad = 256 - len(data) % 256
+        if type(data) != bytearray:
+            data = bytearray(data)
         data.extend([0xff for _ in range(num_pad)])
         return data
 

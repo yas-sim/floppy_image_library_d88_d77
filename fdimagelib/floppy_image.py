@@ -377,10 +377,10 @@ class FLOPPY_DISK_D88:
         """
         Reconstruct single D88 disk image data from current contents of this object.
         """
-        disk_name = self.disk_name
+        disk_name = bytearray(self.disk_name)
         if len(disk_name) < 16:
             disk_name += " " * (16-len(disk_name))
-        disk_name = disk_name[:16].encode('utf-8') + bytes([0])
+        disk_name = disk_name[:16] + bytes([0])
         d88_hdr = struct.pack(f'<17s9xBBI', disk_name, self.write_protect, self.disk_type, 0)
 
         all_track_img = bytearray()
