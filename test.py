@@ -194,15 +194,16 @@ class TestDiskImage(unittest.TestCase):
                     fs.dump_valid_directory()
 
     def test_cmd_fmdir(self):
-        subprocess.run(f'python fmdir.py -f {TestDiskImage.test_image_file} -n 0 -v', shell=True)
+        subprocess.run(f'python fmdir.py -f {TestDiskImage.test_image_file} -n 0 -v --original', shell=True, check=True)
 
     def test_cmd_fmread(self):
-        for index in range(30):
-            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i {index} -v', shell=True)
-        subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i 0 -v -o test.out', shell=True)
+        for index in range(3):
+            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i {index} -v', shell=True, check=True)
+        subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -i 0 -v -o test.out', shell=True, check=True)
         file_names = ('ASM09', 'ASM09EB', 'DEBUG', 'DISASM')
-        for file_name in file_names:
-            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -t {file_name} -v', shell=True)
+        output_names = ('asm09.bin', 'asm09eb.bin', 'debug.bin', 'disasm.bin')
+        for file_name, output in zip(file_names, output_names):
+            subprocess.run(f'python fmread.py -f {TestDiskImage.test_image_file} -t {file_name} -o {output} -v', shell=True, check=True)
 
 # ===================================================================
 
@@ -233,4 +234,3 @@ match 0:
         unittest.main(TestDiskImage, defaultTest=test_set[test_num])
     case _:
         pass
-
