@@ -36,12 +36,12 @@ options:
   -f FILE, --file FILE  D88/D77 image file name
   -n IMAGE_NUMBER, --image_number IMAGE_NUMBER
                         Specify target image number (if the image file contains multiple images). Default=0
-  -t TARGET_FILE, --target_file TARGET_FILE
-                        Target file name in the image file to read.
+  -s SOURCE, --source SOURCE
+                        Source file name in the image file to read.
   -i INDEX, --index INDEX
                         Directory index number to specify the target file to read.
-  -o OUTPUT, --output OUTPUT
-                        Output file name. When omitted, the input file name and file attributes are used to generate the output file name.
+  -d DESTINATION, --destination DESTINATION
+                        Destination (destination) file name. When omitted, the source file name and file attributes are used to generate the destination file name.
   -v, --verbose         Verbose flag
   ```
 Command line examples: 

@@ -3,11 +3,6 @@ import argparse
 
 import fdimagelib
 
-def add_attribute_to_file_name(file_name, file_type:int, ascii_flag:int, random_access_flag:0):
-    res  = str(file_type)
-    res += 'B' if ascii_flag == 0x00 else 'A' if ascii_flag==0xff else '-'
-    res += ''
-
 def main(args):
     image_file, disk_image = fdimagelib.open_image(args.file, args.image_number)
     fs = fdimagelib.FM_FILE_SYSTEM()
@@ -26,12 +21,11 @@ def main(args):
     if args.verbose:
         print(f"Read file: {data['file_name_j']}")
 
-    attr_str = fdimagelib.attributes_to_string(data['file_type'], data['ascii_flag'], data['random_access_flag'])
+    attr_str = ''.join(fdimagelib.attributes_to_string(data['file_type'], data['ascii_flag'], data['random_access_flag']))  # "2BS", "0BS", ...
     if args.destination != '' and args.destination is not None:
-        root, ext = os.path.splitext(args.destination)
-        destination_file = f"{root}-{''.join(attr_str)}{ext}"
+        destination_file = f"{args.destination}.{attr_str}"
     else:                                                           # destination file name is not specified. Use "input file name" as file name. 
-        destination_file = f"{data['file_name_j']}.{''.join(attr_str)}"  # Use input file attributes (e.g. "2B0") as the file extension
+        destination_file = f"{data['file_name_j']}.{attr_str}"      # Use input file attributes (e.g. "0BS") as the file extension
     with open(destination_file, 'wb') as f:
         f.write(data['data'])
 
