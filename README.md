@@ -35,14 +35,19 @@ options:
   -h, --help            show this help message and exit
   -f FILE, --file FILE  D88/D77 image file name
   -n IMAGE_NUMBER, --image_number IMAGE_NUMBER
-                        Specify target image number (if the image file contains multiple images). Default=0
+                        Specify target image number (if the image file contains
+                        multiple images). Default=0
   -s SOURCE, --source SOURCE
                         Source file name in the image file to read.
   -i INDEX, --index INDEX
                         Directory index number to specify the target file to read.
   -d DESTINATION, --destination DESTINATION
-                        Destination (destination) file name. When omitted, the source file name and file attributes are used to generate the destination file name.
+                        Destination (destination) file name. When omitted, the source
+                        file name and file attributes are used to generate the
+                        destination file name.
   -v, --verbose         Verbose flag
+  --decode_ir           File contents decode flag. If this flag is set, BASIC IR code
+                        will be decoded and stored as plain text source file.
   ```
 Command line examples: 
 
