@@ -13,6 +13,7 @@ Submodules
    fdimagelib.file_system
    fdimagelib.floppy_image
    fdimagelib.misc
+   fdimagelib.motorola_s
 
 Module contents
 ---------------

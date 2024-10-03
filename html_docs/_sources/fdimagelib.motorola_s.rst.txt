@@ -1,0 +1,7 @@
+fdimagelib.motorola\_s module
+==============================
+
+.. automodule:: fdimagelib.motorola_s
+   :members:
+   :undoc-members:
+   :show-inheritance:

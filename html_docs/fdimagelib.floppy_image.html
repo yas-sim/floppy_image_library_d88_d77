@@ -77,13 +77,13 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="fdimagelib.floppy_image.FLOPPY_DISK_D88.read_sector">
 <span class="sig-name descname"><span class="pre">read_sector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">track</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sect_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignoreCH</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fdimagelib.floppy_image.FLOPPY_DISK_D88.read_sector" title="Link to this definition">¶</a></dt>
-<dd><p>Read a sector. Use track number and sector ID (C, H, R) to specify the sector.
-Input parameters:</p>
-<blockquote>
-<div><p>track = Track number (0-163)
+<dd><dl class="simple">
+<dt>Read a sector. Use track number and sector ID (C, H, R) to specify the sector.</dt><dd><p>Input parameters:
+track = Track number (0-163)
 sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.
 ignoreCH = Ignores C and H parameters and cares only R</p>
-</div></blockquote>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -131,15 +131,15 @@ sect_idx = The sector index is counted from the top of the track starts with 0. 
 <dl class="py method">
 <dt class="sig sig-object py" id="fdimagelib.floppy_image.FLOPPY_DISK_D88.write_sector">
 <span class="sig-name descname"><span class="pre">write_sector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">track</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sect_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_mark</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignoreCH</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_new</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fdimagelib.floppy_image.FLOPPY_DISK_D88.write_sector" title="Link to this definition">¶</a></dt>
-<dd><p>Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.
-Input parameters:</p>
-<blockquote>
-<div><p>track = Track number (0-163)
+<dd><dl class="simple">
+<dt>Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.</dt><dd><p>Input parameters:
+track = Track number (0-163)
 sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.
 sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.
 ignoreCH = Ignores C and H parameters and cares only R
 create_new = Create a new sector when the specified sector does not exist</p>
-</div></blockquote>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -233,6 +233,7 @@ sect_idx = The sector index is counted from the top of the track starts with 0. 
 <li class="toctree-l4"><a class="reference internal" href="fdimagelib.file_system.html">fdimagelib.file_system module</a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#">fdimagelib.floppy_image module</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fdimagelib.misc.html">fdimagelib.misc module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fdimagelib.motorola_s.html">fdimagelib.motorola_s module</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="fdimagelib.html#module-fdimagelib">Module contents</a></li>

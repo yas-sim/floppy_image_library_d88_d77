@@ -122,7 +122,7 @@ class FLOPPY_DISK_D88:
     def read_sector(self, track, sect_id, ignoreCH = True):
         """
         Read a sector. Use track number and sector ID (C, H, R) to specify the sector.  
-        Input parameters:  
+            Input parameters:  
             track = Track number (0-163)  
             sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
             ignoreCH = Ignores C and H parameters and cares only R  
@@ -182,7 +182,7 @@ class FLOPPY_DISK_D88:
     def write_sector(self, track, sect_id = None, write_data=None, density=0x00, data_mark=0x00, status=0x00, ignoreCH = True, create_new=False):
         """
         Write data to a sector. Use track number and sector ID (C, H, R) to specify the sector.  
-        Input parameters:  
+            Input parameters:  
             track = Track number (0-163)  
             sect_id = (C, H, R). Use sect_idx instead of sect_id when None is set.  
             sect_idx = The sector index is counted from the top of the track starts with 0. Use sect_id instead of sect_idx when None is set.  
