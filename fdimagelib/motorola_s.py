@@ -1,3 +1,5 @@
+import struct
+
 from typing import *
 
 class DATA_BUFFER_FOR_MOTOROLAS:
@@ -17,7 +19,16 @@ class DATA_BUFFER_FOR_MOTOROLAS:
         self.buffer.append(data)
         self.bottom_address = self.top_address + len(self.buffer) -1
 
-    def set_data(self, address:int, data:int) -> None:
+    def set_data(self, address:int, data:int, extend=False) -> None:
+        if extend:
+            if address < self.top_address:                  # Extend the buffer towards low address
+                diff = self.top_address - address
+                self.buffer = [0] * diff + self.buffer
+                self.top_address = address
+            elif address >= self.bottom_address:             # Extend the buffer towards high address
+                diff = address - self.bottom_address + 1
+                self.buffer = self.buffer + [0] * diff
+                self.bottom_address = self.bottom_address + diff
         assert address >= self.top_address and address <= self.bottom_address
         self.buffer[address - self.top_address] = data
 
@@ -97,7 +108,7 @@ class MOTOROLA_S:
                 case 2:
                     buffer.append(data)
 
-    def generate_records(self) -> str:
+    def encode(self) -> str:
         srecords = ''
         if self.header is not None:
             srec = DATA_BUFFER_FOR_MOTOROLAS()
@@ -118,4 +129,51 @@ class MOTOROLA_S:
             srecords += srec_buf
 
         return srecords
-        
+    
+    def decode(self, srecords:str) -> Tuple[int, bytes]:
+        """
+        Decode a Motorola-S file.
+            Return: (entry_address, data, header)
+        """
+        header = []
+        srec = DATA_BUFFER_FOR_MOTOROLAS()
+        first_record = True
+        entry_address = None
+        lines = srecords.splitlines()
+        for line in lines:
+            type, bytes, address, payload, sum = self.decode_record(line)
+            match type:
+                case 0:     # Header
+                    header = payload
+                case 1:     # Data
+                    if first_record:
+                        first_record = False
+                        srec.set_top_address(address)
+                    for pos, dt in enumerate(payload):
+                        srec.set_data(address+pos, dt, extend=True)
+                case 9:     # End
+                    entry_address = address
+                case _:
+                    raise ValueError(f'Unsupported record type ({type})')
+        data = srec.buffer
+        top_address = srec.top_address
+        return (top_address, data, entry_address)
+
+
+    def decode_record(self, srec_str:str) -> Tuple[int, int, int, bytes, int]:
+        """
+        Decode single Motorola-S record.
+            Return: (type, bytes, address, payload, sum)
+        """
+        if srec_str[0] != 'S':
+            raise ValueError(f'Not a Motorola-S record ({srec_str})')
+        type = int(srec_str[1])
+        if type not in (0, 1, 9):
+            return ValueError(f'Unsupported record type ({type})')
+        srec_str = srec_str.replace('\n', '')
+        srec_str = srec_str.replace('\r', '')
+        num_bytes = int('0x'+srec_str[2:2+2] ,16)
+        address = int('0x'+srec_str[4:4+4], 16)
+        payload = bytes([ int('0x'+(srec_str[8+pos*2 : 10+pos*2]), 16) for pos in range(num_bytes-3) ])
+        sum = int('0x'+srec_str[-2:], 16)
+        return (type, num_bytes, address, payload, sum)
