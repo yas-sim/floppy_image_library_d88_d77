@@ -59,7 +59,7 @@ class DATA_BUFFER_FOR_MOTOROLAS:
             sum = 0
             for dt in srec[2:]:                                             # Skip 'S' and record type ('S0', 'S1', ...)
                 sum += ord(dt)
-            sum &= 0xff
+            sum = ~sum & 0xff                                               # complement of 1
             srec += f'{sum:02X}\n'
             srec_buf += srec
 
@@ -109,6 +109,9 @@ class MOTOROLA_S:
                     buffer.append(data)
 
     def encode(self) -> str:
+        """
+        Encode the buffer contents and generates Motorola S-records
+        """
         srecords = ''
         if self.header is not None:
             srec = DATA_BUFFER_FOR_MOTOROLAS()
@@ -130,9 +133,9 @@ class MOTOROLA_S:
 
         return srecords
     
-    def decode(self, srecords:str) -> Tuple[int, bytes]:
+    def decode(self, srecords:str, check_check_sum:bool=True) -> Tuple[int, bytes]:
         """
-        Decode a Motorola-S file.
+        Decode a Motorola-S text data.
             Return: (entry_address, data, header)
         """
         header = []
@@ -141,7 +144,7 @@ class MOTOROLA_S:
         entry_address = None
         lines = srecords.splitlines()
         for line in lines:
-            type, bytes, address, payload, sum = self.decode_record(line)
+            type, bytes, address, payload, sum = self.decode_record(line, check_check_sum)
             match type:
                 case 0:     # Header
                     header = payload
@@ -160,7 +163,7 @@ class MOTOROLA_S:
         return (top_address, data, entry_address)
 
 
-    def decode_record(self, srec_str:str) -> Tuple[int, int, int, bytes, int]:
+    def decode_record(self, srec_str:str, check_check_sum:bool=True) -> Tuple[int, int, int, bytes, int]:
         """
         Decode single Motorola-S record.
             Return: (type, bytes, address, payload, sum)
@@ -175,5 +178,12 @@ class MOTOROLA_S:
         num_bytes = int('0x'+srec_str[2:2+2] ,16)
         address = int('0x'+srec_str[4:4+4], 16)
         payload = bytes([ int('0x'+(srec_str[8+pos*2 : 10+pos*2]), 16) for pos in range(num_bytes-3) ])
-        sum = int('0x'+srec_str[-2:], 16)
+        # SUM = num_bytes + address + payload
+        true_sum = int('0x'+srec_str[-2:], 16)
+        sum = ((num_bytes>>8) & 0xff) + (num_bytes & 0xff) + ((address>>8) & 0xff) + (address & 0xff)
+        for dt in payload:
+            sum += dt
+        sum = ~sum & 0xff
+        if check_check_sum and sum != true_sum:
+            raise ValueError(f'Check sum mismatch (True={true_sum:02x}:{sum:02x})')
         return (type, num_bytes, address, payload, sum)
