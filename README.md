@@ -24,8 +24,19 @@ options:
 
 Command line examples:
 ```sh
-python fmdir.py -f image.d88 -n 0
-```
+python fmdir.py -f fb3l2.d77 -n 0
+  0 DFMCD    2 B S   0    2
+  1 MCOPY    2 B S   1    4
+  2 SYSDSK   0 B S   2    6
+  3 VOLCOPY  0 B S   3    5
+  4 AUTOUTY  0 B S   4    3
+  5 PFDEF    0 B S   5    9
+  6 SYSUTY   0 B S   7   39
+  :   :       :
+ 34 TEST     1 A S  68    3
+ 35 WOMAN    1 A S  69   37
+ 36 KOMACHI  1 A S  74   48
+ ```
 
 
 ### `fmread.py`
