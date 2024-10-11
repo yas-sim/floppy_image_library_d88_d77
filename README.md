@@ -3,12 +3,14 @@
 This libray is intended to be used for manipulating the floppy disk images for emulators.  
 Initial target is to support D88/D77 floppy disk image format.  
 
+NOTICE: CLI commands and file system only supports Fujitsu FM-7 series disk BASIC foromat disks.   
+
 ----------------------------
 
 ## CLI commands:
 
 ### `fmdir.py`
-**Description**: Show directory entries of an D88/D77 image file.  
+**Description**: Show directory entries of an FM-7 DISK BASIC disk in D88/D77 image file.  
 
 ```sh
 options:
@@ -28,7 +30,7 @@ python fmdir.py -f image.d88 -n 0
 
 ### `fmread.py`
 
-**Description**: Read a file from a D88/D77 image file.  
+**Description**: Read a file from an FM-7 DISK BASIC disk in D88/D77 image file.  
 
 ```sh
 options:
@@ -61,7 +63,7 @@ python fmread.py -f image.d88 -n 0 -i 1
 ```
 
 ### `fmwrite.py`  
-**Description**: Write a file to a D88/D77 image file.  
+**Description**: Write a file to an FM-7 DISK BASIC disk in D88/D77 image file.  
 
 ```sh
 options:
@@ -82,7 +84,7 @@ python fmwrite.py -f test.d88 -s GAME.0AS
 
 ### `fmmakedisk.py`  
 
-Create a new image file. The new image file contains only one disk image. The disk image will be formatted in F-BASIC DISK BASIC format.  
+Create a D88 new image file. The new image file contains only one disk image. The disk image will be formatted in FM-7 DISK BASIC format.  
 ```sh
 options:
   -h, --help            show this help message and exit
@@ -92,6 +94,10 @@ options:
 
 ----------------------------
 
+## Library API document  
+You can find a simple API document [here](./html_docs/index.html).
+
+----------------------------
 ### 'FD_IMAGE' and its derivative classes
 This class represents a floppy disk image file that may contain multiple floppy disk information.
 |Name|Description|Note|
