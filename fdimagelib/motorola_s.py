@@ -2,78 +2,18 @@ import struct
 
 from typing import *
 
-class DATA_BUFFER_FOR_MOTOROLAS:
-    def __init__(self) -> None:
-        self.buffer = []
-        self.top_address = 0
-        self.bottom_address = 0
-        self.data_per_record = 16       # 32 is more common
-
-    def set_top_address(self, address:int) -> None:
-        assert address >= 0 and address <= 0xffff
-        self.top_address = address
-        self.bottom_address = address
-
-    def append(self, data:int) -> None:
-        assert data >= 0 and data <= 0xff
-        self.buffer.append(data)
-        self.bottom_address = self.top_address + len(self.buffer) -1
-
-    def set_data(self, address:int, data:int, extend=False) -> None:
-        if extend:
-            if address < self.top_address:                  # Extend the buffer towards low address
-                diff = self.top_address - address
-                self.buffer = [0] * diff + self.buffer
-                self.top_address = address
-            elif address >= self.bottom_address:             # Extend the buffer towards high address
-                diff = address - self.bottom_address + 1
-                self.buffer = self.buffer + [0] * diff
-                self.bottom_address = self.bottom_address + diff
-        assert address >= self.top_address and address <= self.bottom_address
-        self.buffer[address - self.top_address] = data
-
-    def range_check(self, address:int) -> int:
-        if address >= self.top_address and address <= self.bottom_address:
-            return 1                                                        # address is in the range of data buffer
-        elif address == self.bottom_address + 1:
-            return 2                                                        # address is bottom_address +1 
-        else:
-            return 0                                                        # address is out of range
-
-    def generate_records(self, record_type:int) -> str:
-        srec = ''
-        srec_buf = ''
-        addr = self.top_address
-        pos = 0
-        while pos < len(self.buffer):
-            num_data_left = len(self.buffer) - pos
-            if num_data_left >= self.data_per_record:
-                num_data = self.data_per_record
-            else:
-                num_data = num_data_left
-            srec = f'S{str(record_type)}{2+num_data+1:02X}{addr+pos:04X}'   # 2==address field, 1=check sum field
-            for count in range(num_data):
-                data = self.buffer[pos + count]
-                srec += f'{data:02X}'
-            # Calculate check sum
-            sum = 0
-            for dt in srec[2:]:                                             # Skip 'S' and record type ('S0', 'S1', ...)
-                sum += ord(dt)
-            sum = ~sum & 0xff                                               # complement of 1
-            srec += f'{sum:02X}\n'
-            srec_buf += srec
-
-            srec = ''
-            pos += num_data
-        return srec_buf
-
-
 class MOTOROLA_S:
     def __init__(self) -> None:
-        self.buffers:DATA_BUFFER_FOR_MOTOROLAS = []
+        self.init_data_buffer()
         self.header = None
         self.entry_address = None
+        self.record_size = 16        # Data length of one S-record. 32 is most popular
     
+    def init_data_buffer(self):
+        self.buffer = bytearray()
+        self.buffer_top_address = 0xffffffff
+        self.buffer_bottom_address = 0
+
     def set_header(self, data:any) -> int:
         header = []
         if type(data) == str:
@@ -89,24 +29,88 @@ class MOTOROLA_S:
         self.entry_address = address
 
     def add_data(self, address, data) -> None:
-        if len(self.buffers) == 0:
-            new_buffer = DATA_BUFFER_FOR_MOTOROLAS()
-            new_buffer.set_top_address(address)
-            new_buffer.append(data)
-            self.buffers.append(new_buffer)
-            return
-        for buffer in self.buffers:
-            range = buffer.range_check(address)
-            match range:
-                case 0:
-                    new_buffer = DATA_BUFFER_FOR_MOTOROLAS()
-                    new_buffer.set_top_address(address)
-                    new_buffer.append(data)
-                    self.buffers.append(new_buffer)
-                case 1:
-                    buffer.set_data(address, data)
-                case 2:
-                    buffer.append(data)
+        if len(self.buffer) <= address:
+            num_extend = address - len(self.buffer) + 1
+            self.buffer.extend(bytes(num_extend))
+        self.buffer[address] = data
+        if self.buffer_bottom_address < address:
+            self.buffer_bottom_address = address
+        if self.buffer_top_address > address:
+            self.buffer_top_address = address
+
+
+
+    def generate_srecord(self, record_type:int, address:int, payload:bytes):
+        """
+        Generate single line of Motorola S-record
+        """
+        assert record_type >= 0 and record_type <= 9
+        address_bytes = [ 2, 2, 3, 4, 0, 2, 3, 4, 3, 2 ][record_type]
+        srecord  = f'S{record_type:d}'
+        num_bytes = address_bytes + len(payload) + 1    # 1 == check-sum
+        srecord += f'{num_bytes:02X}'
+        srecord += f'{address:08X}'[-2 * address_bytes:]
+        for data in payload:
+            srecord += f'{data:02X}'
+        sum = 0
+        for pos in range(2, len(srecord), 2):   # -2 for 'S' on the top of the record and record type
+            hex_str = srecord[pos : pos + 2]
+            sum += int(hex_str, 16)
+        sum = ~sum & 0xff
+        srecord += f'{sum:02X}\n'
+        return srecord
+
+    def decode_srecord(self, record:str, enable_check_sum:bool=True) -> Tuple[bool, int, int, bytes]:
+        """
+        Decode single line of Motorola S-record
+            Return: 
+                match_sum:bool
+                record_type:int
+                address:int
+                payload:bytes
+        """
+        record = record.rstrip('\n')
+        payload = bytearray()
+        address = -1
+        record_type = -1
+        error_response = (False, -1, -1, bytes())
+        assert len(record) >= 5
+        if record[0] != 'S':
+            return error_response
+        record_type = record[1]
+        assert record_type.isdecimal()
+        record_type = int(record_type)
+        num_bytes = int(record[2 : 2 + 2], 16)
+        sum = num_bytes
+        
+        address_bytes = [ 2, 2, 3, 4, 0, 2, 3, 4, 3, 2 ][record_type]
+        num_data = num_bytes - address_bytes - 1
+        address_offset = 1 + 1 + 1 * 2
+        data_offset = address_offset + address_bytes * 2
+        csum_offset = data_offset + num_data * 2
+        total_record_len = csum_offset + 2
+
+        assert len(record) >= total_record_len
+        #assert len(record) == total_record_len        # Strict check
+
+        address = int(record[4 : 4 + address_bytes * 2], 16)
+        for n in range(address_bytes):
+            sum += (address >> (n * 8)) & 0xff
+
+        for pos in range(num_data):
+            hex_str = record[data_offset + pos * 2 : data_offset + pos * 2 + 2]
+            dt = int(hex_str, 16)
+            payload.append(dt)
+            sum += dt
+
+        sum = ~sum & 0xff      # complement of 1
+        true_sum = int(record[csum_offset : csum_offset + 2], 16)
+        if enable_check_sum and sum != true_sum:
+            raise ValueError(f'Check sum mismatch (True={true_sum:02x}:{sum:02x})')
+
+        return (sum == true_sum, record_type, address, bytes(payload))
+
+
 
     def encode(self) -> str:
         """
@@ -114,22 +118,20 @@ class MOTOROLA_S:
         """
         srecords = ''
         if self.header is not None:
-            srec = DATA_BUFFER_FOR_MOTOROLAS()
-            srec.set_top_address(0)
-            [ srec.append(dt) for dt in self.header ]
-            srec_buf = srec.generate_records(0)
-            srecords += srec_buf
-            del srec
+            srec = self.generate_srecord(0, 0, self.header)
+            srecords += srec
 
-        for srec in self.buffers:
-            srec_buf = srec.generate_records(1)
-            srecords += srec_buf
+        for addr in range(self.buffer_top_address, self.buffer_bottom_address, self.record_size):
+            rec_top = addr
+            rec_bottom = addr + self.record_size
+            if rec_bottom > self.buffer_bottom_address:
+                rec_bottom = self.buffer_bottom_address
+            srec = self.generate_srecord(1, addr, self.buffer[rec_top : rec_bottom + 1])
+            srecords += srec
 
         if self.entry_address is not None:
-            srec = DATA_BUFFER_FOR_MOTOROLAS()
-            srec.set_top_address(self.entry_address)
-            srec_buf = srec.generate_records(9)
-            srecords += srec_buf
+            srec = self.generate_srecord(9, self.entry_address, bytes())
+            srecords += srec
 
         return srecords
     
@@ -139,51 +141,24 @@ class MOTOROLA_S:
             Return: (entry_address, data, header)
         """
         header = []
-        srec = DATA_BUFFER_FOR_MOTOROLAS()
-        first_record = True
+        self.init_data_buffer()
         entry_address = None
         lines = srecords.splitlines()
         for line in lines:
-            type, bytes, address, payload, sum = self.decode_record(line, check_check_sum)
-            match type:
-                case 0:     # Header
+            sum, record_type, address, payload = self.decode_srecord(line, check_check_sum)
+            if record_type == -1:
+                continue            # ignore non S-record lines
+            if sum == False:
+                raise ValueError(f'Check sum error in S-record : {line}')
+            match record_type:
+                case 0:             # Header
                     header = payload
-                case 1:     # Data
-                    if first_record:
-                        first_record = False
-                        srec.set_top_address(address)
+                case 1 | 2 | 3:     # Data
                     for pos, dt in enumerate(payload):
-                        srec.set_data(address+pos, dt, extend=True)
-                case 9:     # End
+                        self.add_data(address + pos, dt)                    
+                case 7 | 8 | 9:     # End
                     entry_address = address
                 case _:
                     raise ValueError(f'Unsupported record type ({type})')
-        data = srec.buffer
-        top_address = srec.top_address
-        return (top_address, data, entry_address)
-
-
-    def decode_record(self, srec_str:str, check_check_sum:bool=True) -> Tuple[int, int, int, bytes, int]:
-        """
-        Decode single Motorola-S record.
-            Return: (type, bytes, address, payload, sum)
-        """
-        if srec_str[0] != 'S':
-            raise ValueError(f'Not a Motorola-S record ({srec_str})')
-        type = int(srec_str[1])
-        if type not in (0, 1, 9):
-            return ValueError(f'Unsupported record type ({type})')
-        srec_str = srec_str.replace('\n', '')
-        srec_str = srec_str.replace('\r', '')
-        num_bytes = int('0x'+srec_str[2:2+2] ,16)
-        address = int('0x'+srec_str[4:4+4], 16)
-        payload = bytes([ int('0x'+(srec_str[8+pos*2 : 10+pos*2]), 16) for pos in range(num_bytes-3) ])
-        # SUM = num_bytes + address + payload
-        true_sum = int('0x'+srec_str[-2:], 16)
-        sum = ((num_bytes>>8) & 0xff) + (num_bytes & 0xff) + ((address>>8) & 0xff) + (address & 0xff)
-        for dt in payload:
-            sum += dt
-        sum = ~sum & 0xff
-        if check_check_sum and sum != true_sum:
-            raise ValueError(f'Check sum mismatch (True={true_sum:02x}:{sum:02x})')
-        return (type, num_bytes, address, payload, sum)
+        valid_data = self.buffer[self.buffer_top_address : self.buffer_bottom_address]
+        return (self.buffer_top_address, valid_data, entry_address)
