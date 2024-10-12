@@ -391,7 +391,7 @@ class FM_FILE_SYSTEM:
             ascii_flag: 0x00:Binary, 0xff:ASCII  
           Return: 
             Dict[]    
-            'file_type': 0=BASIC IR, 2=Machine code, 3=BASIC ASCII, -1=Others  
+            'file_type': 0=BASIC IR, 1=protected BASIC IR, 2=Machine code, 3=BASIC ASCII, -1=Others  
             'data': File data  
             'unlist': Unlist line number  
             'length': Machine code length

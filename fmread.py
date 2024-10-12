@@ -37,7 +37,7 @@ def main(args):
             else:
                 write_data = extracted_contents['data']
                 attr_str = default_attr_str
-        case 2:
+        case 2:                                             # Machine language code / binary data
             entry_address = extracted_contents['entry_address']
             top_address = extracted_contents['load_address']
             file_contents = extracted_contents['data'][5:-6]                                        # Exclude header and footer, and extract the binary contents
@@ -48,20 +48,19 @@ def main(args):
                     motorolas.add_data(top_address + ofst, dt)
                 write_data = motorolas.encode().encode()
                 attr_str = 'mot'
-            elif args.yaml or args.json:
-                if args.yaml:
-                    write_data = yaml.dump(extracted_contents)
-                    write_data = write_data.encode()
-                    attr_str = 'yaml'
-                else:
-                    extracted_contents['data'] = base64.b64encode(extracted_contents['data']).decode()
-                    write_data = json.dumps(extracted_contents, indent=4)
-                    write_data = write_data.encode()
-                    attr_str = 'json'
+            elif args.yaml:
+                write_data = yaml.dump(extracted_contents)
+                write_data = write_data.encode()
+                attr_str = 'yaml'
+            elif args.json:
+                extracted_contents['data'] = base64.b64encode(extracted_contents['data']).decode()
+                write_data = json.dumps(extracted_contents, indent=4)
+                write_data = write_data.encode()
+                attr_str = 'json'
             else:
                 write_data = extracted_contents['data']
                 attr_str = default_attr_str
-        case _:
+        case _:                                             # Protected BASIC IR, Random access file, etc
             if data['file_type'] == 0 and data['ascii_flag'] == 0xff and data['random_access_flag'] == 0:   # BASIC source code in ASCII
                 write_data = extracted_contents['data'][:-1]
                 attr_str = 'txt'
@@ -92,4 +91,10 @@ if __name__ == '__main__':
     parser.add_argument('--yaml', required=False, action='store_true', default=False, help='Convert a machine code file contents to YAML format.')
     parser.add_argument('--json', required=False, action='store_true', default=False, help='Convert a machine code file contents to JSON format.')
     args = parser.parse_args()
+
+    count = 0
+    count = count+1 if args.srecord else count
+    count = count+1 if args.yaml    else count
+    count = count+1 if args.json    else count
+    assert count <= 1, 'Only one of --srecord, --yaml, or --json can be set.'
     main(args)
