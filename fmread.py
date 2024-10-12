@@ -30,7 +30,7 @@ def main(args):
 
     match extracted_contents['file_type']:
         case 0:                                             # BASIC IR
-            if args.decode_ir == True:
+            if args.decode_basic == True:
                 write_data = fdimagelib.F_BASIC_IR_decode(extracted_contents['data'])
                 write_data = write_data.encode()
                 attr_str = 'txt'
