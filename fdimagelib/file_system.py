@@ -385,9 +385,18 @@ class FM_FILE_SYSTEM:
     def extract_file_contents(self, file_data:bytearray, file_type:int, ascii_flag:int):
         """
         Description: Extract file contents based on the file attributes.  
-        file_data: Data to decode  
-        file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code  
-        ascii_flag: 0x00:Binary, 0xff:ASCII  
+          Parameters:
+            file_data: Data to decode  
+            file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code  
+            ascii_flag: 0x00:Binary, 0xff:ASCII  
+          Return: 
+            Dict[]    
+            'file_type': 0=BASIC IR, 2=Machine code, 3=BASIC ASCII, -1=Others  
+            'data': File data  
+            'unlist': Unlist line number  
+            'length': Machine code length
+            'load_address': Machine code top address
+            'entry_address': Machine code entry address
         """
         data = bytearray()
         eof = 0x1a
@@ -409,9 +418,9 @@ class FM_FILE_SYSTEM:
                     case 0x02:
                         if file_data[0] == 0x00:
                             mc_len, mc_load_addr = struct.unpack_from('>HH', file_data, 1)          # Machine code length, load address
-                            data = file_data[: 1 + 2 + 2 + mc_len + 1 + 2 + 2 + 1 + 1]
-                            if file_data[-1] == eof:
-                                mc_entry_addr = struct.unpack_from('>H', file_data, 1+2+2+mc_len+1+3)[0]  # Entry address
+                            data = file_data[: 1 + 2 + 2 + mc_len + 1 + 2 + 2 + 1]
+                            if data[-1] == eof:
+                                mc_entry_addr = struct.unpack_from('>H', data, 1 + 2 + 2 + mc_len + 1 + 2)[0]  # Entry address
                                 res = { 'file_type':2, 'data':data, 'length':mc_len, 'load_address':mc_load_addr, 'entry_address':mc_entry_addr}
                                 return res
                         return { 'file_type':-1, 'data':bytearray() }
