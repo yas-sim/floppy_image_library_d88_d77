@@ -10,7 +10,7 @@ def main(args):
     fs.set_image(disk_image)
     entries = fs.get_valid_directory_entries()
     for entry in entries:
-        entry['random_access_flag'] = 'S' if entry['random_access_flag']==0x00 else 'R' if entry['random_access_flag']==0x00 else '?'
+        entry['random_access_flag'] = 'S' if entry['random_access_flag']==0x00 else 'R' if entry['random_access_flag']==0xff else '?'
         entry['ascii_flag'] = 'B' if entry['ascii_flag']==0x00 else 'A' if entry['ascii_flag']==0xff else '?'
         if args.original == False:
             print('{dir_idx:3d} {file_name_j:8} {file_type:1} {ascii_flag:1} {random_access_flag:1} {top_cluster:3d} {num_sectors:4d}'.format(**entry))
