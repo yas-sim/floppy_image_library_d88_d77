@@ -69,8 +69,7 @@ def main(args):
                     write_contents += srec_txt
                     attr_str = 'mot'
                 elif args.yaml:
-                    #write_contents[f'data_{num}'] = bytes(file_contents)
-                    record = {'address': top_address, 'contents': base64.b64encode(file_contents).decode() }
+                    record = {'address': top_address, 'contents': bytes(file_contents) }
                     write_contents['data'].append(record)
                     attr_str = 'yaml'
                 elif args.json:
