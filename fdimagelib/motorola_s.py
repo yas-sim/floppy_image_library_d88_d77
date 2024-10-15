@@ -121,7 +121,7 @@ class MOTOROLA_S:
             srec = self.generate_srecord(0, 0, self.header)
             srecords += srec
 
-        for addr in range(self.buffer_top_address, self.buffer_bottom_address, self.record_size):
+        for addr in range(self.buffer_top_address, self.buffer_bottom_address+1, self.record_size):
             rec_top = addr
             rec_bottom = addr + self.record_size
             if rec_bottom > self.buffer_bottom_address:

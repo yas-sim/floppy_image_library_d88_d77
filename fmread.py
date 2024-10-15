@@ -1,4 +1,3 @@
-import os
 import argparse
 
 import base64
@@ -31,43 +30,81 @@ def main(args):
     match extracted_contents['file_type']:
         case 0:                                             # BASIC IR
             if args.decode_basic == True:
-                write_data = fdimagelib.F_BASIC_IR_decode(extracted_contents['data'])
-                write_data = write_data.encode()
-                attr_str = 'txt'
+                decoded_basic_text = fdimagelib.F_BASIC_IR_decode(extracted_contents['data'])
+                if args.yaml:
+                    write_contents = extracted_contents.copy()
+                    write_contents['basic_text'] = decoded_basic_text
+                    attr_str = 'yaml'
+                elif args.json:
+                    write_contents = extracted_contents.copy()
+                    write_contents['basic_text'] = decoded_basic_text
+                    write_contents['data'] = base64.b64encode(write_contents['data']).decode()
+                    attr_str = 'json'
+                else:
+                    write_contents = decoded_basic_text.encode()            # Output as plain BASIC text
+                    attr_str = 'txt'
             else:
-                write_data = extracted_contents['data']
+                write_contents = extracted_contents['data']                 # Output the data without IR decoding
                 attr_str = default_attr_str
-        case 2:                                             # Machine language code / binary data
+
+        case 2:                                                             # Machine language code / binary data
+            if args.yaml or args.json:
+                write_contents = extracted_contents.copy()
+                write_contents['num_chunks'] = len(extracted_contents['data'])
+                write_contents['data'] = []
+            elif args.srecord:
+                write_contents = ''
+            else:
+                write_contents = ''
+
             entry_address = extracted_contents['entry_address']
-            top_address = extracted_contents['load_address']
-            file_contents = extracted_contents['data'][5:-6]                                        # Exclude header and footer, and extract the binary contents
+
+            for num, chunk in enumerate(extracted_contents['data']):
+                top_address, file_contents = chunk
+                if args.srecord:
+                    motorolas = fdimagelib.MOTOROLA_S()
+                    for ofst, dt in enumerate(file_contents):
+                        motorolas.add_data(top_address + ofst, dt)
+                    srec_txt = motorolas.encode()
+                    write_contents += srec_txt
+                    attr_str = 'mot'
+                elif args.yaml:
+                    #write_contents[f'data_{num}'] = bytes(file_contents)
+                    record = {'address': top_address, 'contents': base64.b64encode(file_contents).decode() }
+                    write_contents['data'].append(record)
+                    attr_str = 'yaml'
+                elif args.json:
+                    record = {'address': top_address, 'contents': base64.b64encode(file_contents).decode() }
+                    write_contents['data'].append(record)
+                    attr_str = 'json'
+                else:
+                    write_contents = file_contents
+                    attr_str = default_attr_str
+
             if args.srecord:
                 motorolas = fdimagelib.MOTOROLA_S()
                 motorolas.set_entry_address(entry_address)
-                for ofst, dt in enumerate(file_contents):
-                    motorolas.add_data(top_address + ofst, dt)
-                write_data = motorolas.encode().encode()
-                attr_str = 'mot'
-            elif args.yaml:
-                write_data = yaml.dump(extracted_contents)
-                write_data = write_data.encode()
-                attr_str = 'yaml'
-            elif args.json:
-                extracted_contents['data'] = base64.b64encode(extracted_contents['data']).decode()
-                write_data = json.dumps(extracted_contents, indent=4)
-                write_data = write_data.encode()
-                attr_str = 'json'
-            else:
-                write_data = extracted_contents['data']
-                attr_str = default_attr_str
+                srec = motorolas.encode()
+                write_contents += srec                          # Entry address for S-record
+                write_contents = write_contents.encode()
+            elif args.json or args.yaml:
+                write_contents['entry_address'] = entry_address
+
         case _:                                             # Protected BASIC IR, Random access file, etc
             if data['file_type'] == 0 and data['ascii_flag'] == 0xff and data['random_access_flag'] == 0:   # BASIC source code in ASCII
-                write_data = extracted_contents['data'][:-1]
+                write_contents = extracted_contents['data'][:-1]
                 attr_str = 'txt'
             else:
-                write_data = file_contents['data']
+                write_contents = extracted_contents['data']
                 attr_str = default_attr_str
 
+    match attr_str:
+        case 'yaml':
+            write_contents = yaml.dump(write_contents)
+            write_contents = write_contents.encode()
+        case 'json':
+            write_contents = json.dumps(write_contents, indent=4)
+            write_contents = write_contents.encode()
 
     if args.destination != '' and args.destination is not None:
         destination_file = f"{args.destination}.{attr_str}"
@@ -75,7 +112,7 @@ def main(args):
         destination_file = f"{data['file_name_j']}.{attr_str}"      # Use input file attributes (e.g. "0BS") as the file extension
 
     with open(destination_file, 'wb') as f:
-        f.write(write_data)
+        f.write(write_contents)
 
 
 if __name__ == '__main__':
@@ -89,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--decode_basic', required=False, action='store_true', default=False, help='Decode BASIC IR code and store it as a plain text file.')
     parser.add_argument('--srecord', required=False, action='store_true', default=False, help='Convert a machine code file contents to Motorola S-record format.')
     parser.add_argument('--yaml', required=False, action='store_true', default=False, help='Convert a machine code file contents to YAML format.')
-    parser.add_argument('--json', required=False, action='store_true', default=False, help='Convert a machine code file contents to JSON format.')
+    parser.add_argument('--json', required=False, action='store_true', default=False, help='Convert a machine code file contents to JSON format.<br>Note: The \'data\' will be encoded in base64.')
     args = parser.parse_args()
 
     count = 0

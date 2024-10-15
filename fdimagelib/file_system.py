@@ -416,14 +416,35 @@ class FM_FILE_SYSTEM:
                     case 0x01:
                         return { 'file_type':-1, 'data':bytearray() }
                     case 0x02:
-                        if file_data[0] == 0x00:
-                            mc_len, mc_load_addr = struct.unpack_from('>HH', file_data, 1)          # Machine code length, load address
-                            data = file_data[: 1 + 2 + 2 + mc_len + 1 + 2 + 2 + 1]
-                            if data[-1] == eof:
-                                mc_entry_addr = struct.unpack_from('>H', data, 1 + 2 + 2 + mc_len + 1 + 2)[0]  # Entry address
-                                res = { 'file_type':2, 'data':data, 'length':mc_len, 'load_address':mc_load_addr, 'entry_address':mc_entry_addr}
-                                return res
-                        return { 'file_type':-1, 'data':bytearray() }
+                        """
+                        Data chunk format
+                        Remarks: Machine code file can be consist with multiple chunks. 
+                        ofst        size
+                        0x00        0x01    Chunk type      0x00: data, 0xff: entry address (the final chunk)
+                        0x01        0x02    Chunk length(CLEN)
+                        0x03        0x02    Load address/Entry address
+                        0x05        CLEN    Data
+                        """
+                        code_chunks = []
+                        header_len = 1 + 2 + 2
+                        while True:
+                            match file_data[0]:
+                                case 0x00:
+                                    mc_len, mc_load_addr = struct.unpack_from('>HH', file_data, 1)          # Machine code length, load address
+                                    machine_code = file_data[header_len: header_len + mc_len]
+                                    file_data = file_data[header_len + mc_len:]
+                                    chunk = (mc_load_addr, machine_code)
+                                    code_chunks.append(chunk)
+                                case 0xff:
+                                    mc_entry_addr = struct.unpack_from('>H', file_data, 1 + 2)[0]  # Entry address
+                                    file_data = file_data[header_len:]
+                                case 0x1a:
+                                    break
+                                case _:
+                                    assert f'Wrong machine code chunk type (0x{file_data[0]:02x})'
+
+                        res = { 'file_type':2, 'data':code_chunks, 'entry_address':mc_entry_addr}
+                        return res
                     case _:
                         return { 'file_type':-1, 'data':bytearray() }
             case 0xff:          # ASCII
