@@ -116,10 +116,23 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="fdimagelib.file_system.FM_FILE_SYSTEM.extract_file_contents">
 <span class="sig-name descname"><span class="pre">extract_file_contents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytearray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ascii_flag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fdimagelib.file_system.FM_FILE_SYSTEM.extract_file_contents" title="Link to this definition">¶</a></dt>
-<dd><p>Description: Extract file contents based on the file attributes.
-file_data: Data to decode
+<dd><dl class="simple">
+<dt>Description: Extract file contents based on the file attributes.</dt><dd><dl class="simple">
+<dt>Parameters:</dt><dd><p>file_data: Data to decode
 file_type: 0x00:BASIC source, 0x01:BASIC data, 0x02:Machine code
 ascii_flag: 0x00:Binary, 0xff:ASCII</p>
+</dd>
+<dt>Return:</dt><dd><p>Dict[]
+‘file_type’: 0=BASIC IR, 1=protected BASIC IR, 2=Machine code, 3=BASIC ASCII, -1=Others
+‘data’: File data
+‘unlist’: Unlist line number
+‘length’: Machine code length
+‘load_address’: Machine code top address
+‘entry_address’: Machine code entry address</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
